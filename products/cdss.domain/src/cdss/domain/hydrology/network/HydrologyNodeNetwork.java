@@ -380,11 +380,12 @@ private double
 	__netRX = -999.0,
 	__netTY = -999.0;
 
+// FIXME SAM 2008-03-17 The following seems fragile given hand-off between methods.
 /**
 Used when interpolating node locations.
 */
 private double 
-	__SPACING = 0,
+	__nodeSpacing = 0,
 	__lx = 0,
 	__by = 0;
 
@@ -1873,7 +1874,7 @@ Fills in missing locations downstream between the two nodes.
 @param ds the first downstream node with a valid location, or null if none do.
 @param dist the dist between the two nodes (in count of nodes).
 */
-private void fillDownstream(HydrologyNode node, HydrologyNode ds, int dist) {
+protected void fillDownstream(HydrologyNode node, HydrologyNode ds, int dist) {
 	boolean done = false;
 	HydrologyNode holdNode;
 	HydrologyNode wNode = node;
@@ -1892,8 +1893,8 @@ private void fillDownstream(HydrologyNode node, HydrologyNode ds, int dist) {
 	}
 
 	// default to use if no downstream node available
-	double xSep = __SPACING;
-	double ySep = __SPACING;
+	double xSep = __nodeSpacing;
+	double ySep = __nodeSpacing;
 
 	// if a location is known for both the upstream and downstream node,
 	// determine the amount of distancing for all the nodes in-between.
@@ -1960,7 +1961,7 @@ from downstream node locations.
 this node and the first node downstream with a valid location will also have
 their locations filled.
 */
-private void fillFromDownstream(HydrologyNode node) {
+protected void fillFromDownstream(HydrologyNode node) {
 	HydrologyNode ds = node.getDownstreamNode();
 
 	if (ds == null) {
@@ -2000,8 +2001,8 @@ private void fillFromDownstream(HydrologyNode node) {
 	// upstream node locations, instead.
 
 
-	double dsX = __lx + __SPACING;
-	double dsY = __by + __SPACING;
+	double dsX = __lx + __nodeSpacing;
+	double dsY = __by + __nodeSpacing;
 	if (found == true) {
 		dsX = ds.getX();
 		dsY = ds.getY();
@@ -2014,8 +2015,8 @@ private void fillFromDownstream(HydrologyNode node) {
 		dsds = ds.getDownstreamNode();
 	}
 	if (dsds == null) {
-		dx = __SPACING;
-		dy = __SPACING;
+		dx = __nodeSpacing;
+		dy = __nodeSpacing;
 	}
 	else {
 		dx = dsX - dsds.getX();
@@ -2110,7 +2111,7 @@ GRLimits limits) {
 /**
 Fills in the missing location for all nodes on the main stem.
 */
-private void fillMainStemLocations() {
+protected void fillMainStemLocations() {
 	boolean done = false;
 	boolean firstFound = false;
 	HydrologyNode ds = null;
@@ -2245,10 +2246,10 @@ private void fillMainStemLocations() {
 					//	"  Setting upstream for '" 
 					//	+ node.getLabel()+ "'");
 					node.setX(first.getX() 	
-						- (__SPACING 
+						- (__nodeSpacing 
 						* upstreamInvalidCount));
 					node.setY(first.getY() 	
-						- (__SPACING 
+						- (__nodeSpacing 
 						* upstreamInvalidCount));
 					upstreamInvalidCount--;
 				}
@@ -2258,10 +2259,10 @@ private void fillMainStemLocations() {
 					//	+ node.getLabel()+ "'");
 					downstreamCount++;
 					node.setX(first.getX() 	
-						+ (__SPACING 
+						+ (__nodeSpacing 
 						* downstreamCount));
 					node.setY(first.getY() 	
-						+ (__SPACING 
+						+ (__nodeSpacing 
 						* downstreamCount));
 				}
 			}
@@ -2307,22 +2308,22 @@ private void fillMainStemLocations() {
 	// This will be used to extrapolate the upstream nodes.
 	double upDX = first.getX() - firstNext.getX();
 	if (upDX == 0) {
-		upDX = __SPACING;
+		upDX = __nodeSpacing;
 	}
 	double upDY = first.getY() - firstNext.getY();
 	if (upDY == 0) {
-		upDY = __SPACING;
+		upDY = __nodeSpacing;
 	}
 
 	// determine the delta between the last valid node and its neighbor.
 	// This will be used to extrapolate the downstream nodes.
 	double downDX = lasts[0].getX() - lasts[1].getX();
 	if (downDX == 0) {
-		downDX = __SPACING;
+		downDX = __nodeSpacing;
 	}
 	double downDY = lasts[0].getY() - lasts[1].getY();
 	if (downDY == 0) {
-		downDY = __SPACING;
+		downDY = __nodeSpacing;
 	}
 
 	// the node 'first' stores the location of the node on
@@ -2389,7 +2390,7 @@ valid locations.
 @param node a node on a reach other than the main stem which has a valid 
 location.
 */
-private void fillReachDownstream(HydrologyNode node) {
+protected void fillReachDownstream(HydrologyNode node) {
 	HydrologyNode ds = node.getDownstreamNode();
 
 	if (ds == null) {
@@ -2447,7 +2448,7 @@ private void fillReachDownstream(HydrologyNode node) {
 /**
 Fills missing locations for all the nodes upstream of the main stem.
 */
-private void fillUpstreamLocations() {
+protected void fillUpstreamLocations() {
 	boolean done = false;
 	HydrologyNode holdNode;
 	HydrologyNode node = getMostUpstreamNode();	
@@ -5111,6 +5112,15 @@ protected void setBounds(double lx, double by, double rx, double ty) {
 }
 
 /**
+ * Set the __by (used when filling in nodes).
+ * @param by.
+ */
+public void setBy ( double by )
+{
+	__by = by;
+}
+
+/**
 Set the check file writer.  This is used, for example, by makenet to direct
 check messages.
 @param checkfp PrintWriter to write check message.s
@@ -5187,6 +5197,15 @@ public void setLinks(Vector links) {
 }
 
 /**
+ * Set the __lx (used when filling in nodes).
+ * @param lx.
+ */
+public void setLx ( double lx )
+{
+	__lx = lx;
+}
+
+/**
 Sets up the linked list network based on a Vector of the nodes in the network.
 The nodes are checked to see which one is the head of the network and that node
 is stored internally as __nodeHead.
@@ -5229,11 +5248,20 @@ public void setNodeDiam(double node_diam) {
 
 /**
  * Set the head node (most downstream) for the network.
- * @param nodeHead Set the head node (most downstream) for the network.
+ * @param nodeHead The head node (most downstream) for the network.
  */
 public void setNodeHead ( HydrologyNode nodeHead )
 {
 	__nodeHead = nodeHead;
+}
+
+/**
+ * Set the node spacing (used when filling in nodes).
+ * @param nodeSpacing Node spacing.
+ */
+public void setNodeSpacing ( double nodeSpacing )
+{
+	__nodeSpacing = nodeSpacing;
 }
 
 /**
