@@ -84,6 +84,7 @@ import RTi.Util.Message.Message;
 
 import RTi.Util.String.StringUtil;
 
+import java.util.List;
 import java.util.Vector;
 
 /**
@@ -400,7 +401,7 @@ private String __waterString;
 /**
 Vector of nodes directly upstream of this node.
 */
-private Vector __upstream;
+private List __upstream;
 
 //--------------------------------------------------------------------------
 // Data members used solely with the network drawing code.
@@ -540,7 +541,7 @@ private String __downstreamNodeID = null;
 /**
 The ids of all the nodes immediately upstream of this node.
 */
-private Vector __upstreamNodeIDs = null;
+private List __upstreamNodeIDs = null;
 //--------------------------------------------------------------------------
 
 /**
@@ -579,11 +580,9 @@ public boolean addDownstreamNode(HydrologyNode downstream_node) {
 		// find the element to reset...
 		int pos = __downstream.getUpstreamNodePosition(getCommonID());
 		if (pos >= 0) {
-			Vector downstreamUpstream =
-				__downstream.getUpstreamNodes();
+			List downstreamUpstream = __downstream.getUpstreamNodes();
 			if (downstreamUpstream != null) {
-				downstreamUpstream.setElementAt(downstream_node,
-					pos);
+				downstreamUpstream.set(pos,downstream_node);
 			}
 		}
 		// Connect the new downstream node to this node.
@@ -663,7 +662,7 @@ public boolean addUpstreamNode(HydrologyNode upstream_node) {
 		__upstream = new Vector();
 	}
 
-	__upstream.addElement(upstream_node);
+	__upstream.add(upstream_node);
 
 	// Make so the upstream node has this node as its downstream node...
 	upstream_node.setDownstreamNode(this);
@@ -1019,14 +1018,14 @@ Break the link with an upstream node.
 public boolean deleteUpstreamNode(HydrologyNode upstream_node) {
 	String routine = __CLASS + ".deleteUpstreamNode";
 
-	// Find a matching node.  Just check addesses...
+	// Find a matching node.  Just check addresses...
 	try {
 
 	for (int i = 0; i < __upstream.size(); i++) {
 		if (upstream_node.equals(
-			(HydrologyNode)__upstream.elementAt(i))) {
+			(HydrologyNode)__upstream.get(i))) {
 			// We have found a match.  Delete the element...
-			__upstream.removeElementAt(i);
+			__upstream.remove(i);
 			return true;
 		}
 	}
@@ -1746,7 +1745,7 @@ public String[] getUpstreamNodeIDs() {
 	}
 	String[] ids = new String[size];
 	for (int i = 0; i < size; i++) {
-		ids[i] = (String)__upstreamNodeIDs.elementAt(i);
+		ids[i] = (String)__upstreamNodeIDs.get(i);
 	}
 	return ids;
 }
@@ -1765,7 +1764,7 @@ public String[] getUpstreamNodesIDs() {
 
 	String[] ids = new String[__upstream.size()];
 	for (int i = 0; i < __upstream.size(); i++) {
-		ids[i] =((HydrologyNode)__upstream.elementAt(i)).getCommonID();
+		ids[i] =((HydrologyNode)__upstream.get(i)).getCommonID();
 	}
 	return ids;
 }
@@ -1935,7 +1934,7 @@ public HydrologyNode getUpstreamNode(int position) {
 		return null;
 	}
 	// Return the requested one...
-	return(HydrologyNode)__upstream.elementAt(position);
+	return(HydrologyNode)__upstream.get(position);
 }
 
 /**
@@ -1951,7 +1950,7 @@ public int getUpstreamNodePosition(String commonID) {
 	HydrologyNode upstream;
 	for (int i = 0; i < size; i++) {
 		// Return the first one that matches...
-		upstream = (HydrologyNode)__upstream.elementAt(i);
+		upstream = (HydrologyNode)__upstream.get(i);
 		if (commonID.equalsIgnoreCase(upstream.getCommonID())) {
 			return i;
 		}
@@ -1963,7 +1962,7 @@ public int getUpstreamNodePosition(String commonID) {
 Returns the Vector of upstream nodes.
 @return the Vector of upstream nodes.
 */
-public Vector getUpstreamNodes() {
+public List getUpstreamNodes() {
 	return __upstream;
 }
 
@@ -2174,7 +2173,7 @@ diagramming tools.
 @param pos the position at which to insert the node.
 */
 public void insertUpstreamNode(HydrologyNode node, int pos) {
-	__upstream.insertElementAt(node, pos);
+	__upstream.add(pos,node);
 }
 
 /**
@@ -2183,10 +2182,9 @@ diagramming tools.
 @param nodes a non-null Vector of nodes to be inserted upstream of this node.
 @param pos the position at which to insert the nodes.
 */
-public void insertUpstreamNodes(Vector nodes, int pos) {
+public void insertUpstreamNodes(List nodes, int pos) {
 	for (int i = nodes.size() - 1; i >= 0; i--) {
-		__upstream.insertElementAt((HydrologyNode)nodes.elementAt(i), 
-			pos);
+		__upstream.add(pos,(HydrologyNode)nodes.get(i));
 	}
 }
 
@@ -2443,9 +2441,9 @@ public boolean parseAreaPrecip(String string0) {
 	}
 	else if (nfields == 2) {
 		// Assume that we have a valid theOperator and do the math...
-		Vector v = StringUtil.breakStringList(string, " \t", 0);
-		area = (String)v.elementAt(0);
-		precip = (String)v.elementAt(1);
+		List v = StringUtil.breakStringList(string, " \t", 0);
+		area = (String)v.get(0);
+		precip = (String)v.get(1);
 		double a = (new Double(area)).doubleValue();
 		double p = (new Double(precip)).doubleValue();
 		double water = 0;
@@ -2498,22 +2496,20 @@ public boolean parseAreaPrecip(String string0) {
 }
 
 /**
-Removes a node from the upstream of this node.  Used by the network drawing 
-code.
+Removes a node from the upstream of this node.  Used by the network drawing code.
 @param pos the position in the __upstream Vector of the node to be removed.
 */
 public void removeUpstreamNode(int pos) {	
-	__upstream.removeElementAt(pos);
+	__upstream.remove(pos);
 }
 
 /**
-Replaces one of this node's upstream nodes with another node.  Used by the
-network drawing code.
+Replaces one of this node's upstream nodes with another node.  Used by the network drawing code.
 @param node the node to replace the upstream node with.
 @param pos the position in the __upstream Vector of the node to be replaced.
 */
 public void replaceUpstreamNode(HydrologyNode node, int pos) {
-	__upstream.setElementAt(node, pos);
+	__upstream.set(pos,node);
 }
 
 /**
@@ -3034,12 +3030,10 @@ public void setTypeAbbreviation(String type) {
 }
 
 /**
-Sets the Vector nodes upstream of this node.  Used by the network
-diagramming tools.
-@param v the Vector of upstream nodes.  If null, then there are no nodes
-upstream of this node.
+Sets the Vector nodes upstream of this node.  Used by the network diagramming tools.
+@param v the Vector of upstream nodes.  If null, then there are no nodes upstream of this node.
 */
-public void setUpstreamNodes(Vector v) {
+public void setUpstreamNodes(List v) {
 	__upstream = v;
 }
 
