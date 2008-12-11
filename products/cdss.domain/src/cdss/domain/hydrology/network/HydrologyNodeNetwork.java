@@ -366,9 +366,10 @@ Whether the legend position was read from an XML file.
 private boolean __legendPositionSet = false;
 
 /**
-Indicates that dry river nodes should be treated as baseflow.  This is used by the WIS.
+FIXME SAM 2008-12-10 Evaluate use - can this be converted to "natural flow"?  For now do it.
+Indicates that dry river nodes should be treated as natural flow.  This is used by the WIS.
 */
-private boolean __treatDryAsBaseflow;
+private boolean __treatDryAsNaturalFlow;
 
 /**
 Holds the bounds of the network for use in a network GUI.
@@ -406,6 +407,11 @@ private double
 	__nodeDiam,
 	__titleX,
 	__titleY;
+
+/**
+The name of the input file for this network, or null if it has not been read/saved.
+*/
+private String __inputName = null;
 
 /**
 The lower-left position of the legend as read from an XML file.
@@ -491,7 +497,7 @@ public HydrologyNodeNetwork(boolean addEndNode)
 		//endNode.setInWIS(false);
 		endNode.setType(HydrologyNode.NODE_TYPE_END);
 		endNode.setCommonID("END");
-		endNode.setIsBaseflow(false);
+		endNode.setIsNaturalFlow(false);
 		endNode.setIsImport(false);
 		endNode.setSerial(1);
 		endNode.setNodeInReachNumber(1);
@@ -525,15 +531,15 @@ Adds a node the network.
 @param type the kind of node to add.
 @param usid the id of the node immediately upstream of this node.  Can be null.
 @param dsid the id of the node immediately downstream of this node.
-@param isBaseflow whether the node is a baseflow node or not.
+@param isNaturalFlow whether the node is a natural flow node or not.
 @param isImport whether the node is an import node or not.
 */
 public void addNode(String id, int type, String usid, String dsid,
-boolean isBaseflow, boolean isImport) {
+boolean isNaturalFlow, boolean isImport) {
 /*
 	Message.printStatus(2, "", "Adding '" + id + "', linking upstream to '"
 		+ usid + " and downstream to '" + dsid + "'  (" + type + ")"
-		+ "  Is baseflow: " + isBaseflow);
+		+ "  Is natural flow: " + isNaturalFlow);
 */
 	// make sure the id is unique within the network
 	id = checkUniqueID(id, true);
@@ -544,7 +550,7 @@ boolean isBaseflow, boolean isImport) {
 	// FIXME 2008-03-15 Need to remove WIS code
 	addNode.setType(type);
 	addNode.setCommonID(id);
-	addNode.setIsBaseflow(isBaseflow);
+	addNode.setIsNaturalFlow(isNaturalFlow);
 	addNode.setIsImport(isImport);
 
 	boolean done = false;
@@ -601,44 +607,41 @@ boolean isBaseflow, boolean isImport) {
 		}
 	}
 
-	// if the node was not found upstream of the downstream node then
-	// don't worry about, just add the node to be added to upstream nodes
-	// of ds
+	// If the node was not found upstream of the downstream node then
+	// don't worry about, just add the node to be added to upstream nodes of "ds"
 	if (!found) {
 		addNode.setTributaryNumber(ds.getNumUpstreamNodes() + 1);
 		ds.addUpstreamNode(addNode);
 	}
 
-	// set ds to be the node to be added's downstream node
+	// Set ds to be the node to be added's downstream node
 	addNode.setDownstreamNode(ds);
 
 	// At this point, the following connections have been made:
 	// - the node to be added now points downstream to ds
-	// - ds node points to the node to be added as one of its upstream
-	//   nodes.
+	// - ds node points to the node to be added as one of its upstream nodes.
 
-	// if an upstream node was found, then set the node to be added
-	// as the downstream node and the upstream node as the node to
-	// be added's only upstream node.
+	// If an upstream node was found, then set the node to be added
+	// as the downstream node and the upstream node as the node to be added's only upstream node.
 	if (us != null) {
 		us.setDownstreamNode(addNode);
 		addNode.addUpstreamNode(us);
 	}
 	
-	// get the computational order value from the downstream node and
+	// Get the computational order value from the downstream node and
 	// re-assign it to the node to be added.  The computational order
 	// for all the nodes downstream of the node to be added will be recomputed below.
 	int comp = ds.getComputationalOrder();
 	addNode.setComputationalOrder(comp);
 
-	// set ds's upstream order to now be the node to be added's, too.
+	// Set ds's upstream order to now be the node to be added's, too.
 	addNode.setUpstreamOrder(ds.getUpstreamOrder());
 
 	int serial = -1;
 
 	if (!found) {
 		// (new tributary) 
-		// look through the network upstream of the downstream node 
+		// Look through the network upstream of the downstream node 
 		// for the largest serial value -- the new node will need 
 		// to be one larger than that value if it is on a new tributary
 		serial = findHighestUpstreamSerial(ds, ds.getSerial());
@@ -647,9 +650,8 @@ boolean isBaseflow, boolean isImport) {
 		// placed on an existing tributary -- upstreamNode still holds 
 		// the value of the upstream Node
 		serial = upstreamNode.getSerial();
-		// decrement it becuase want to find the value of the serial
-		// number that is one less than what the new node's serial
-		// number will be
+		// decrement it because want to find the value of the serial
+		// number that is one less than what the new node's serial number will be
 		serial--;
 	}
 
@@ -1086,7 +1088,8 @@ private String checkUniqueID(String id, boolean first) {
 }
 
 /**
-Converts old-style baseflow nodes into new style nodes.
+Converts old-style base flow nodes into new style nodes (other node type with an attribute indicating
+whether a natural flow and/or import location).
 */
 public void convertNodeTypes() {
 	List nodes = new Vector();
@@ -1105,9 +1108,9 @@ public void convertNodeTypes() {
 		node = (HydrologyNode)nodes.get(i);
 		if (node.getType() == HydrologyNode.NODE_TYPE_BASEFLOW) {
 			node.setType(HydrologyNode.NODE_TYPE_OTHER);
-			node.setIsBaseflow(true);
+			node.setIsNaturalFlow(true);
 			Message.printStatus(2, routine, 
-				"Converting node \"" + node.getCommonID() + "\" from BFL to OTH/IsBaseflow=true.");
+				"Converting node \"" + node.getCommonID() + "\" from BFL to OTH/IsNaturalFlow=true.");
 		}
 		else if (node.getType() == HydrologyNode.NODE_TYPE_IMPORT) {
 			node.setType(HydrologyNode.NODE_TYPE_OTHER);
@@ -2515,35 +2518,34 @@ throws Throwable {
 }
 
 /**
-Find the downstream baseflow node in the reach, given a starting node.  This is
+Find the downstream natural flow node in the reach, given a starting node.  This is
 used in WIS to find a downstream node to use for computations.
-This method does consider dry nodes as baseflow nodes if the flag has been turned on.
-@return HydroBase_Node for upstream baseflow node in a reach.
+This method does consider dry nodes as natural flow nodes if the flag has been turned on.
+@return HydroBase_Node for upstream natural flow node in a reach.
 @param node Starting HydroBase_Node in network (some node in a reach).
-@see StateMod_NodeNetwork#treatDryNodesAsBaseflow()
+@see StateMod_NodeNetwork#treatDryNodesAsNaturalFlow()
 */
-public HydrologyNode findDownstreamBaseflowNodeInReach(HydrologyNode node) {
-	// Just move downstream in the reach until we find an baseflow
-	// node.  Return null if we get to the bottom of the reach and there is no baseflow node...
+public HydrologyNode findDownstreamNaturalFlowNodeInReach(HydrologyNode node) {
+	// Just move downstream in the reach until we find a natural flow
+	// node.  Return null if we get to the bottom of the reach and there is no natural flow node...
 
 	for (HydrologyNode nodePt = getDownstreamNode(node,POSITION_RELATIVE);
-		((nodePt != null) &&
-		(nodePt.getReachCounter() == node.getReachCounter()));
+		((nodePt != null) && (nodePt.getReachCounter() == node.getReachCounter()));
 		nodePt = getDownstreamNode(nodePt, POSITION_RELATIVE)) {
-		if (__treatDryAsBaseflow) {
+		if (__treatDryAsNaturalFlow) {
 			// First check for a dry node.
 			if (nodePt.getIsDryRiver()) {
 				return nodePt;
 			}
 		}
-		if (nodePt.isBaseflow()) {
+		if (nodePt.getIsNaturalFlow()) {
 			return nodePt;
 		}
 		if (nodePt.getDownstreamNode() == null) {
 			break;
 		}
 	}
-	// We were unable to find it...
+	// Unable to find it...
 	return null;
 }
 
@@ -2578,25 +2580,20 @@ public HydrologyNode findDownstreamFlowNode(HydrologyNode node) {
 				+ ")");
 		}
 		if (nodePrev.equals(nodePt)) {
-			// We have gone to the bottom of the system and there
-			// is no downstream flow node.  Return NULL...
+			// Have gone to the bottom of the system and there is no downstream flow node.  Return null.
 			Message.printDebug(1, routine,
-				"Node \"" + node.getCommonID()
-				+ "\" has no downstream flow node");
+				"Node \"" + node.getCommonID() + "\" has no downstream flow node");
 			return null;
 		}
 		// This originally worked for makenet and should work now for
-		// the admin tool since we are using base flow switch.
-		else if ((nodePt.getType() == HydrologyNode.NODE_TYPE_FLOW) && nodePt.isBaseflow()) {
-			// We have a downstream flow node...
+		// the admin tool since we are using natural flow switch.
+		else if ((nodePt.getType() == HydrologyNode.NODE_TYPE_FLOW) && nodePt.getIsNaturalFlow()) {
+			// Have a downstream flow node...
 			nodeDownstreamFlow = nodePt;
 			if (Message.isDebugOn) {
-				Message.printDebug(dl, routine,
-					"For \"" + node.getCommonID()
-					+ "\", downstream flow node is \""
-					+ nodeDownstreamFlow.getCommonID()
-					+ "\" A*P=" 
-					+ nodeDownstreamFlow.getWater());
+				Message.printDebug(dl, routine, "For \"" + node.getCommonID()
+					+ "\", downstream flow node is \"" + nodeDownstreamFlow.getCommonID()
+					+ "\" A*P=" + nodeDownstreamFlow.getWater());
 			}
 			return nodePt;
 		}
@@ -3039,29 +3036,28 @@ public static HydrologyNode findReachConfluenceNext(HydrologyNode node) {
 }
 
 /**
-Find the upstream baseflow node in the reach, given a starting node.  This is
+Find the upstream natural flow node in the reach, given a starting node.  This is
 used in WIS to find an upstream node to use for computations.  If 
 a confluence is reached, assume that it also has known flow
-values and can be treated as a baseflow node.
-This method does consider dry nodes as baseflow nodes if the flag has been turned on.
-@param node Starting HydroBase_Node in network (some node in a reach).
-@return HydroBase_Node for upstream baseflow node in a reach.
-@see StateMod_NodeNetwork#treatDryNodesAsBaseflow()
+values and can be treated as a natural flow node.
+This method does consider dry nodes as natural flow nodes if the flag has been turned on.
+@param node Starting Hydrology_Node in network (some node in a reach).
+@return Hydrology_Node for upstream baseflow node in a reach.
+@see StateMod_NodeNetwork#treatDryNodesAsNaturalFlow()
 */
-public HydrologyNode findUpstreamBaseflowNodeInReach(HydrologyNode node) {
-	// Just move upstream in the reach until we find an upstream baseflow
-	// node.  Return null if we get to the top of the reach and there is no baseflow node...
+public HydrologyNode findUpstreamNaturalFowNodeInReach(HydrologyNode node) {
+	// Just move upstream in the reach until we find an upstream natural flow
+	// node.  Return null if we get to the top of the reach and there is no natural flow node...
 	for (HydrologyNode nodePt = getUpstreamNode(node,POSITION_REACH_NEXT);
-		((nodePt != null)
-		&& (nodePt.getReachCounter() == node.getReachCounter()));
+		((nodePt != null) && (nodePt.getReachCounter() == node.getReachCounter()));
 		nodePt = getUpstreamNode(nodePt, POSITION_REACH_NEXT)) {
-		if (__treatDryAsBaseflow) {
+		if (__treatDryAsNaturalFlow) {
 			// First check for a dry node.
 			if (nodePt.getIsDryRiver()) {
 				return nodePt;
 			}
 		}
-		if (nodePt.isBaseflow()) {
+		if (nodePt.getIsNaturalFlow()) {
 			return nodePt;
 		}
 		if (nodePt.getUpstreamNode() == null) {
@@ -3111,7 +3107,7 @@ public List findUpstreamFlowNodes(List upstreamFlowNodes,
 		return null;
 	}
 
-	// The node passed in initially will be "a baseflow node that is not a
+	// The node passed in initially will be "a natural flow node that is not a
 	// flow node" or a "flow node".  It will NOT be a confluence.
 	//
 	// If we are recursing, then node passed in is a confluence and
@@ -3225,9 +3221,8 @@ public List findUpstreamFlowNodes(List upstreamFlowNodes,
 			// bailing out because we are the same as the previous node...
 		}
 		// This originally worked for makenet and should work for the
-		// admin tool now that we are using baseflow nodes...
-		else if (((nodePt.getType() == HydrologyNode.NODE_TYPE_FLOW) && nodePt.isBaseflow())
-			){
+		// admin tool now that we are using natural flow nodes...
+		else if (((nodePt.getType() == HydrologyNode.NODE_TYPE_FLOW) && nodePt.getIsNaturalFlow()) ){
 			// FIXME SAM 2008-03-15 Need to enable this in a generic way
 			// || (StateMod_PrfGageData.isSetprfTarget( nodePt.getCommonID(), prfGageData) >= 0)) {
 			// We are in a reach.  If this is a flow node, then
@@ -3351,8 +3346,8 @@ public List getAnnotations() {
 }
 
 /**
-Returns a Vector of all the nodes in the network that are baseflow nodes.
-@return a Vector of all the nodes that are baseflow nodes.  The Vector is guaranteed to be non-null.
+Returns a list of all the nodes in the network that are natural flow nodes.
+@return a list of all the nodes that are natural flow nodes.  The kust is guaranteed to be non-null.
 */
 public List getBaseflowNodes() {
 	List v = new Vector();
@@ -3365,7 +3360,7 @@ public List getBaseflowNodes() {
 			return v;
 		}
 
-		if (node.isBaseflow()) {
+		if (node.getIsNaturalFlow()) {
 			v.add(node);
 		}
 
@@ -3376,8 +3371,7 @@ public List getBaseflowNodes() {
 		hold = node;
 		node = getDownstreamNode(node,POSITION_COMPUTATIONAL);
 
-		// to avoid errors when the network is not built 
-		// properly
+		// to avoid errors when the network is not built properly
 		if (hold == node) {
 			return v;
 		}
@@ -3713,6 +3707,15 @@ public GRLimits getExtents() {
 }
 
 /**
+Return the name of the input file for this network, or null if not available (is being created).
+@return the name of the input file.
+*/
+public String getInputName ()
+{
+	return __inputName;
+}
+
+/**
 Returns the layout Vector read in from XML. 
 @return the layout Vector read in from XML.  Can be null.
 */
@@ -3950,10 +3953,8 @@ protected String getNodeLabel(HydrologyNode node, int lt) {
 		label = node.getDescription();
 	}
 	else if (lt == LABEL_NODES_PF) {
-		if (node.isBaseflow()
-			&& (node.getType() != HydrologyNode.NODE_TYPE_FLOW)) {
-			label = StringUtil.formatString(
-				node.getProrationFactor(), "%5.3f");
+		if (node.getIsNaturalFlow() && (node.getType() != HydrologyNode.NODE_TYPE_FLOW)) {
+			label = StringUtil.formatString(node.getProrationFactor(), "%5.3f");
 		}
 		else {
 			label = "";
@@ -4484,7 +4485,7 @@ private void initialize() {
 	__title = 			"Node Network";
 	__titleX = 			0.0;
 	__titleY = 			0.0;
-	__treatDryAsBaseflow = 		false;
+	__treatDryAsNaturalFlow = 		false;
 }
 
 // insertDownstreamNode - insert a node downstream from a given node
@@ -4951,6 +4952,16 @@ protected void setFont(String font, double size) {
 }
 
 /**
+Set the name of the input, typically a filename from which the network was read.  It is useful
+to save this information so that file choosers to re-save can use the same name.
+@param inputName name of the input file that was read for the network.
+*/
+public void setInputName ( String inputName )
+{
+	__inputName = inputName;
+}
+
+/**
 Sets whether this network is in a WIS or not.
 @param inWis whether this network is in a WIS or not.
 */
@@ -5194,27 +5205,26 @@ double y2) {
 }
 
 /**
-Indicate whether dry river nodes should be treated as baseflow nodes.  This is
+Indicate whether dry river nodes should be treated as natural flow nodes.  This is
 useful, for example, when working with WIS.  It may not be as useful,
 for example, when working with StateMod files.  This setting is not migrated
 to the HydroBase_Node level.  It is used primarily by the network methods 
-that search for baseflow nodes.  See the documentation for each of those 
+that search for natural flow nodes.  See the documentation for each of those 
 methods to verify whether dry nodes have the option of being treated as baseflow nodes.
-@return true if dry nodes are to be treated as baseflow nodes for select
-network methods.
+@return true if dry nodes are to be treated as baseflow nodes for select network methods.
 */
-public boolean treatDryNodesAsBaseflow() {
-	return __treatDryAsBaseflow;
+public boolean treatDryNodesAsNaturalFlow() {
+	return __treatDryAsNaturalFlow;
 }
 
 /**
-Set whether dry river nodes should be treated as baseflow nodes.
-@param treat_dry_as_baseflow true if dry nodes are to be treated as
-baseflow nodes for select methods, false if not.
+Set whether dry river nodes should be treated as natural flow nodes.
+@param treatDryAsNaturalFlow true if dry nodes are to be treated as
+natural flow nodes for select methods, false if not.
 @return true Always.
 */
-public boolean treatDryNodesAsBaseflow(boolean treat_dry_as_baseflow) {
-	__treatDryAsBaseflow = treat_dry_as_baseflow;
+public boolean treatDryNodesAsNaturalFlow(boolean treatDryAsNaturalFlow) {
+	__treatDryAsNaturalFlow = treatDryAsNaturalFlow;
 	return true;
 }
 
@@ -5412,7 +5422,7 @@ format =
 + comment + n
 + comment + "Once a generalized XML network is available, StateDMI can be" + n
 + comment + "used to create StateMod station files.  The node type and the" +n
-+ comment + "\"IsBaseflow\" property are used to determine lists of" + n
++ comment + "\"IsNaturalFlow\" property are used to determine lists of" + n
 + comment + "stations for various files." + n
 + comment + n;
 	out.print(format);	
@@ -5522,7 +5532,7 @@ format =
 + comment + "                       Aggregate or \"other\" nodes use" + n
 + comment + "                       identifiers as per modeling procedures." + n
 + comment + n
-+ comment + "      Area             The baseflow area." + n
++ comment + "      Area             The natural flow contributing area." + n
 + comment + n;
 	out.print(format);	
 format = 
@@ -5534,10 +5544,11 @@ format =
 + comment + "                       typically taken from HydroBase or" + n
 + comment + "                       another data source." + n
 + comment + n
-+ comment + "      IsBaseflow       If \"true\", then the node is a location" +n
++ comment + "      IsNaturalFlow    If \"true\", then the node is a location" +n
 + comment + "                       where stream flows will be esimated" + n
 + comment + "                       (and a station will be listed in the" + n
 + comment + "                       StateMod stream estimate station file)." + n
++ comment + "                       This property replaces the old IsBaseflow property." + n
 + comment + n
 + comment + "      IsImport         If \"true\", then the node is an import" +n
 + comment + "                       node, indicating that water will be" + n
@@ -5561,7 +5572,7 @@ format =
 + comment + "                          UpperLeft" + n
 + comment + "                          Center" + n
 + comment + n
-+ comment + "      Precipitation    The baseflow precipitation ." + n
++ comment + "      Precipitation    The natural flow contributing area precipitation ." + n
 + comment + n;
 	out.print(format);	
 format = 

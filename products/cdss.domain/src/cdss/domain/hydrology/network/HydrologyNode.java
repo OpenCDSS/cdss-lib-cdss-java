@@ -84,6 +84,7 @@ import RTi.Util.Message.Message;
 
 import RTi.Util.String.StringUtil;
 
+import java.awt.Font;
 import java.util.List;
 import java.util.Vector;
 
@@ -134,7 +135,10 @@ Import node.
 public static final int NODE_TYPE_IMPORT = 6;
 
 /**
-Baseflow node (stream estimate).
+TODO SAM 2008-12-10 Remove when natural flow is fully enabled and "other" node type use is confirmed
+in user files.
+Baseflow node (stream estimate).  Note that this should not typically be used but is retained
+for historical reasons.  DO NOT CONVERT THIS TO NATURAL_FLOW as there is no natural flow node type.
 */
 public static final int NODE_TYPE_BASEFLOW = 7;
 
@@ -223,9 +227,9 @@ private boolean __inWis = true;
 //FIXME SAM 2008-03-15 Need to remove WIS from this general class
 
 /**
-Whether the node is a baseflow node or not.  Makenet-specific.
+Whether the node is a natural flow location.
 */
-private	boolean __isBaseflow;
+private	boolean __isNaturalFlow;
 
 /**
 Whether the node is an import node or not. 
@@ -292,9 +296,9 @@ public static int ICON_DIAM = 20;
 
 /**
 The extra space around the node icon for displaying the extra circle (or square for plans stations)
-showing that it is a baseflow node.
+showing that it is a natural flow node.
 */
-public static int BASEFLOW_DIAM = 6;
+public static int DECORATOR_DIAM = 6;
 
 /**
 Computational order of nodes, with 1 being most upstream.  This generally has 
@@ -826,7 +830,7 @@ private void calculateWISBounds(GRJComponentDrawingArea da) {
 			__secondarySymbol = new GRSymbol(GRSymbol.SYM_FCIR,
 				style, black, black, ICON_DIAM*2/3, 
 				ICON_DIAM*2/3);
-			__symText = "X";
+			__symText = "O";
 		}
 		else if (__nodeType.equalsIgnoreCase("Confluence")) {
 			__symbol = new GRSymbol(GRSymbol.SYM_CIR, style, black, black, ICON_DIAM*2/3, ICON_DIAM*2/3);
@@ -867,10 +871,10 @@ private void calculateWISBounds(GRJComponentDrawingArea da) {
 			__secondarySymbol = new GRSymbol(GRSymbol.SYM_FCIR,
 				style, black, black, ICON_DIAM*2/3, 
 				ICON_DIAM*2/3);
-			__symText = "X";
+			__symText = "O";
 		}
 		else if (__nodeType.equalsIgnoreCase("Plan")) {
-			__symbol = new GRSymbol(GRSymbol.SYM_SQ,
+			__symbol = new GRSymbol(GRSymbol.SYM_CIR,
 				style, black, black, ICON_DIAM*2/3, 
 				ICON_DIAM*2/3);
 			__secondarySymbol = new GRSymbol(GRSymbol.SYM_FSQ,
@@ -1000,15 +1004,6 @@ private void drawNodeForNetwork(GRJComponentDrawingArea da) {
 			GRDrawingAreaUtil.drawSymbol(da, GRSymbol.SYM_FCIR, __x, __y, __symbol.getSize(), GRUnits.DEVICE,0);
 		}
 		
-		if (__isSelected) {
-			// Draw in the selection color
-			GRDrawingAreaUtil.setColor(da, GRColor.cyan);
-		}
-		else {
-			// Draw in black
-			GRDrawingAreaUtil.setColor(da, GRColor.black);
-		}
-
 		symbolSize = __symbol.getSize();
 
 		if (__type == NODE_TYPE_RES) {
@@ -1104,11 +1099,29 @@ private void drawNodeForNetwork(GRJComponentDrawingArea da) {
 
 		// Draw the text without a symbol, at the position that is appropriate for the largest symbol
 		// that will be shown.  Do not draw a symbol so that the logic below can be simpler and
-		// to avoid redundant drawing.
-		if ( getIsBaseflow() || getIsImport() ) {
-			// Draw the label text slightly offset because the baseflow symbol takes up more room.
+		// to avoid redundant drawing.  Text should always be black.
+		if (__isSelected) {
+			// Draw in the selection color
+			GRDrawingAreaUtil.setColor(da, GRColor.cyan);
+		}
+		else {
+			// Draw in black
+			GRDrawingAreaUtil.setColor(da, GRColor.black);
+		}
+		if ( getIsNaturalFlow() || getIsImport() ) {
+			// Draw the label text slightly offset because the decorator symbol takes up more room.
+			Font oldFont = null;
+			if ( getIsNaturalFlow() ) {
+				// Reset to bold...
+				oldFont = da.getFont();
+				da.setFont( oldFont.getName(), Font.BOLD, oldFont.getSize());
+			}
 			GRDrawingAreaUtil.drawSymbolText(da, GRSymbol.SYM_NONE, 
-				__x, __y, symbolSize + BASEFLOW_DIAM, label, labelAngle, labelPos, GRUnits.DEVICE, 0);
+				__x, __y, symbolSize + DECORATOR_DIAM, label, labelAngle, labelPos, GRUnits.DEVICE, 0);
+			if ( getIsNaturalFlow() ) {
+				// Set back to old font.
+				da.setFont( oldFont.getName(), oldFont.getStyle(), oldFont.getSize());
+			}
 		}
 		else {
 			// No need to offset the text - draw close to the normal symbol.
@@ -1119,19 +1132,41 @@ private void drawNodeForNetwork(GRJComponentDrawingArea da) {
 	
 	// Draw the normal symbol
 
+	if (__isSelected) {
+		// Draw in the selection color
+		GRDrawingAreaUtil.setColor(da, GRColor.cyan);
+	}
+	else {
+		// Draw in black unless a different color has been specified for the symbol
+		if ( __symbol != null ) {
+			GRDrawingAreaUtil.setColor(da, __symbol.getColor());
+		}
+		else {
+			GRDrawingAreaUtil.setColor(da, GRColor.black);
+		}
+	}
 	Message.printStatus(2, routine, "Drawing symbol " + symbol );
 	GRDrawingAreaUtil.drawSymbol(da, symbol, __x, __y, symbolSize, GRUnits.DEVICE,0);
 
-	// Draw a larger circle around baseflow nodes
-	if ( (__symbol != null) && getIsBaseflow()) {
+	// Draw a larger circle around decorator nodes
+	if (__isSelected) {
+		// Draw in the selection color
+		GRDrawingAreaUtil.setColor(da, GRColor.cyan);
+	}
+	else {
+		// Draw in black
+		GRDrawingAreaUtil.setColor(da, GRColor.black);
+	}
+	if ( (__symbol != null) && getIsNaturalFlow()) {
 		GRDrawingAreaUtil.drawSymbol(da, GRSymbol.SYM_CIR,
-			__x, __y, __symbol.getSize() + BASEFLOW_DIAM, GRUnits.DEVICE, 0);
+			__x, __y, __symbol.getSize() + DECORATOR_DIAM, GRUnits.DEVICE, 0);
 	}
 	
-	// Draw a larger square around import nodes
+	// Draw a larger square around import nodes - same color as above
 	if ( (__symbol != null) && getIsImport() ) {
+		//GRDrawingAreaUtil.drawSymbol(da, GRSymbol.SYM_FARR1,
 		GRDrawingAreaUtil.drawSymbol(da, GRSymbol.SYM_SQ,
-			__x, __y, __symbol.getSize() + BASEFLOW_DIAM, GRUnits.DEVICE, 0);
+			__x, __y, __symbol.getSize() + DECORATOR_DIAM, GRUnits.DEVICE, 0);
 	}
 
 	// Draw the secondary symbol, for example the inner X in the end node..
@@ -1141,7 +1176,15 @@ private void drawNodeForNetwork(GRJComponentDrawingArea da) {
 	}
 	
 	// If used, draw text in the middle of the symbol (e.g., "D" for diversion node) - do last so
-	// that it draws on top.
+	// that it draws on top.  This should be in the select color or black.
+	if (__isSelected) {
+		// Draw in the selection color
+		GRDrawingAreaUtil.setColor(da, GRColor.cyan);
+	}
+	else {
+		// Draw in black
+		GRDrawingAreaUtil.setColor(da, GRColor.black);
+	}
 	if (__symText != null){
 		GRDrawingAreaUtil.drawText(da, __symText, __x, __y, 0, GRText.CENTER_Y | GRText.CENTER_X);
 	}
@@ -1246,7 +1289,7 @@ protected String getNodeLabel(int lt) {
 		label = getCommonID();
 	}
 	else if (lt == HydrologyNodeNetwork.LABEL_NODES_PF) {
-		if (isBaseflow() && (getType() != HydrologyNode.NODE_TYPE_FLOW)) {
+		if (getIsNaturalFlow() && (getType() != HydrologyNode.NODE_TYPE_FLOW)) {
 			label = StringUtil.formatString( getProrationFactor(), "%5.3f");
 		}
 		else {	
@@ -1425,27 +1468,27 @@ public String getIdentifier() {
 }
 
 /**
-Returns whether this node is a baseflow node or not.  Makenet-specific.
-@return whether this node is a baseflow node or not.
+Returns whether this node is a dry river or not.  WIS-specific.
+@return whether this node is a dry river or not.
 */
-public boolean getIsBaseflow() {
-	return __isBaseflow;
+public boolean getIsDryRiver() {
+	return __isDryRiver;
 }
 
 /**
-Returns whether this node is an import node or not.  Makenet-specific.
-@return whether this node is an import node or not.
+Returns whether this node is an import node.
+@return whether this node is an import node.
 */
 public boolean getIsImport() {
 	return __isImport;
 }
 
 /**
-Returns whether this node is a dry river or not.  WIS-specific.
-@return whether this node is a dry river or not.
+Returns whether this node is a natural flow node (attribute on node, not node type).
+@return whether this node is a natural flow node (attribute on node, not node type).
 */
-public boolean getIsDryRiver() {
-	return __isDryRiver;
+public boolean getIsNaturalFlow() {
+	return __isNaturalFlow;
 }
 
 /**
@@ -2139,7 +2182,7 @@ private void initialize() {
 	__commonID = "";
 	__netID = "";
 	__riverNodeID = "";
-	__isBaseflow = false;
+	__isNaturalFlow = false;
 	__labelDir = 1;
 	__serial = 0;
 	__computationalOrder = -1;
@@ -2159,27 +2202,6 @@ private void initialize() {
 	//__wisFormat = 		null;
 	__link = DMIUtil.MISSING_LONG;
 	__isDryRiver = false;
-}
-
-/**
-Equivalent to getIsBaseflow().
-*/
-public boolean isBaseflow() {
-	return __isBaseflow;
-}
-
-/**
-Equivalent to getIsImport().
-*/
-public boolean isImport() {
-	return __isImport;
-}
-
-/**
-Equivalent to getIsDryRiver().
-*/
-public boolean isDryRiver() {
-	return __isDryRiver;
 }
 
 /**
@@ -2379,8 +2401,8 @@ public boolean parseAreaPrecip(String string0) {
 		setPrecip((new Double(precip)).doubleValue());
 		setWater(water);
 		if (getWater() > 0.0) {
-			// This is a baseflow node...
-			setIsBaseflow(true);
+			// This is a natural flow node...
+			setIsNaturalFlow(true);
 		}
 		return true;
 	}
@@ -2419,18 +2441,18 @@ This seems to be used only by the legend drawing, but is retained for utility.
 The following resets are done:
 <ol>
 <li>verbose node type (string) is looked up from the node type</li>
-<li>symbol is set to the default for the type, considering the baseflow and import flags</li>
+<li>symbol is set to the default for the type, considering the natural flow and import flags</li>
 <li>secondary symbol is set to null</li>
 <li>boundscCalculated is set to false</li>
 </ol>
 @param type the new type to assign the node
-@param isBaseflow indicates whether the node is a baseflow node
+@param isNaturalFlow indicates whether the node is a baseflow node
 @param isImport indicates whether the node is an import node
 */
-public void resetNode(int type, boolean isBaseflow, boolean isImport ) {
+public void resetNode(int type, boolean isNaturalFlow, boolean isImport ) {
 	__type = type;
 	__boundsCalculated = false;
-	__isBaseflow = isBaseflow;
+	__isNaturalFlow = isNaturalFlow;
 	__isImport = isImport;
 	__nodeType = getTypeString(type, FULL);
 	__secondarySymbol = null;
@@ -2573,7 +2595,7 @@ public static void setDrawText(boolean drawText) {
 }
 
 /**
-Sets the icon diameter.  The baseflow icon diameter will be computed accordingly.
+Sets the icon diameter.  The decorator icon diameter will be computed accordingly.
 @param size size of the icon diameter in pixels.  
 */
 public static void setIconDiam(int size) {
@@ -2582,7 +2604,7 @@ public static void setIconDiam(int size) {
 	if ((third % 2) == 1) {
 		third++;
 	}
-	BASEFLOW_DIAM = third;
+	DECORATOR_DIAM = third;
 }
 
 /**
@@ -2612,11 +2634,11 @@ public void setInWIS(boolean inWis) {
 //FIXME SAM 2008-03-15 Need to remove WIS from this general class
 
 /**
-Sets whether this node is a baseflow node or not.  Makenet-specific.
-@param isBaseflow whether this node is a baseflow node or not.
+Sets whether this node is a dry river or not.  WIS-specific.
+@param isDryRiver whether this node is a dry river or not.
 */
-public void setIsBaseflow(boolean isBaseflow) {
-	__isBaseflow = isBaseflow;
+public void setIsDryRiver(boolean isDryRiver) {
+	__isDryRiver = isDryRiver;
 }
 
 /**
@@ -2628,11 +2650,11 @@ public void setIsImport(boolean isImport) {
 }
 
 /**
-Sets whether this node is a dry river or not.  WIS-specific.
-@param isDryRiver whether this node is a dry river or not.
+Sets whether this node is a natural flow node or not.
+@param isNaturalFlow whether this node is a natural flow node or not.
 */
-public void setIsDryRiver(boolean isDryRiver) {
-	__isDryRiver = isDryRiver;
+public void setIsNaturalFlow(boolean isNaturalflow) {
+	__isNaturalFlow = isNaturalflow;
 }
 
 /**
@@ -2906,8 +2928,8 @@ private void setSymbolFromNodeType ( int nodeType, boolean computeSize )
 	}
 	else if ( nodeType == NODE_TYPE_ISF ) {
 		__symbol = new GRSymbol(GRSymbol.SYM_CIR, symbolStyle, symbolColor, symbolColor, ICON_DIAM, ICON_DIAM);
-		__symText = "I";
-		//__symText = "M";
+		//__symText = "I";
+		__symText = "M";
 	}
 	else if ( nodeType == NODE_TYPE_LABEL ) {
 		__symbol = null;
@@ -2915,10 +2937,10 @@ private void setSymbolFromNodeType ( int nodeType, boolean computeSize )
 	}
 	else if ( nodeType == NODE_TYPE_OTHER ) {
 		__symbol = new GRSymbol(GRSymbol.SYM_CIR, symbolStyle, symbolColor, symbolColor, ICON_DIAM, ICON_DIAM);
-		__symText = "X";
+		__symText = "O";
 	}
 	else if ( nodeType == NODE_TYPE_PLAN ) {
-		__symbol = new GRSymbol(GRSymbol.SYM_CIR, symbolStyle, symbolColor, symbolColor, ICON_DIAM, ICON_DIAM);
+		__symbol = new GRSymbol(GRSymbol.SYM_FCIR, symbolStyle, GRColor.lightGray, symbolColor, ICON_DIAM, ICON_DIAM);
 		__symText = "PL";
 	}
 	else if ( nodeType == NODE_TYPE_RES ) {
@@ -3395,11 +3417,15 @@ public String writeNodeXML(PrintWriter out, boolean verbose) {
 	desc = StringUtil.replaceString(desc, ">", "&gt;");
 	xml += "         Description = \"" + desc + "\"" + n;
 //	xml += "         Identifier = \"" + __identifier + "\"" + n;
-	xml += "         IsBaseflow = \"" + __isBaseflow + "\"" + n;
+	// FIXME SAM 2008-12-10 Need to convert to IsNaturalFlow when old version of StateDMI can
+	// be phased out.  For now write both with the same value so that the network will work with
+	// old and new software.
+	xml += "         IsBaseflow = \"" + __isNaturalFlow + "\"" + n;
+	xml += "         IsNaturalFlow = \"" + __isNaturalFlow + "\"" + n;
 	xml += "         IsImport = \"" + __isImport + "\"" + n;
 //	xml += "         LabelAngle = \"" + __labelAngle + "\"" + n;
 
-	if (__isBaseflow) {
+	if (__isNaturalFlow) {
 		xml += "         Area = \"" + __area + "\"" + n;
 		xml += "         Precipitation = \"" + __precip + "\"" + n;
 	}
