@@ -2317,12 +2317,20 @@ protected void fillReachDownstream(HydrologyNode node) {
 			// this will store the first node downstream of 
 			// the passed-in node with a valid location.
 			ds = ds.getDownstreamNode();
+			if ( ds == null ) {
+				break;
+			}
 		}
 	}
 
 	// get the location of the passed-in node and the location of the
 	// first valid node downstream and interpolate the locations for all the intermediate nodes.
 
+	if ( ds == null ) {
+		// TODO SAM 2009-01-21 Evalute this and the break in the loop - had to put this code in
+		// to avoid null point exceptions but maybe logic can be more robust
+		return;
+	}
 	double x = node.getX();
 	double dsX = ds.getX();
 	
