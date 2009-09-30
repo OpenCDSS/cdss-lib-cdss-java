@@ -3085,7 +3085,7 @@ set 'recursing' to false -- will be set to true if this method recursively calls
 @param recursing false if calling from outside this method, true if calling recursively.
 */
 public List findUpstreamFlowNodes(List upstreamFlowNodes, HydrologyNode node, boolean recursing) {
-	return findUpstreamFlowNodes(upstreamFlowNodes, node, (List)null, recursing);
+	return findUpstreamFlowNodes(upstreamFlowNodes, node, null, recursing);
 }
 
 // TODO SAM 2004-08-15 Need to evaluate how to make prfGageData use more generic.
@@ -3093,14 +3093,16 @@ public List findUpstreamFlowNodes(List upstreamFlowNodes, HydrologyNode node, bo
 Looks for the first upstream flow node on the current stem and the first 
 upstream flow node on any of the tribs to this stream.  For the initial call,
 set 'recursing' to false -- will be set to true if this method recursively calls itself.
-@param upstreamFlowNodes an allocated Vector that will be filled and used internally.
+@param upstreamFlowNodes a non-null list that will be filled and used internally.
 @param node the node from which to look upstream
-@param prfGageData Vector of StateMod_PrfGageData - this is needed for special
-functionality when processing StateMod_StreamEstimate_Coefficients in StateDMI.
+@param upstreamFlowNodeI interface to evaluate StateMod_PrfGageData - this is needed for special
+functionality when processing StateMod_StreamEstimate_Coefficients in StateDMI (indicates nodes
+that should be treated as upstream gages).
 @param recursing false if calling from outside this method, true if calling recursively.
 */
 public List findUpstreamFlowNodes(List upstreamFlowNodes,
-		HydrologyNode node, List prfGageData, boolean recursing) {
+		HydrologyNode node, UpstreamFlowNodeI upstreamFlowNodeI, boolean recursing)
+{
 	String routine = "HydroBase_NodeNetwork.findUpstreamFlowNodes";
 
 	boolean	didRecurse = false;
@@ -3130,20 +3132,15 @@ public List findUpstreamFlowNodes(List upstreamFlowNodes,
 	// computational node because we do not want to immediately catch a flow node!
 	if (Message.isDebugOn) {
 		Message.printDebug(dl, routine,
-			"Trying to find upstream FLOW nodes in reach "
-			+ "starting at \"" + node.getCommonID()
-			+ "\" reachCounter=" + node.getReachCounter()
-			+ " recursing=" + recursing);
+			"Trying to find upstream FLOW nodes in reach starting at \"" + node.getCommonID()
+			+ "\" reachCounter=" + node.getReachCounter() + " recursing=" + recursing);
 	}
 
-	for (	nodePt	= getUpstreamNode(node, POSITION_COMPUTATIONAL),
+	for ( nodePt = getUpstreamNode(node, POSITION_COMPUTATIONAL),
 		// TODO SAM 2007-02-18 Evaluate whether needed
 		//reachCounter = nodePt.getReachCounter(),
-		nodePt.getReachCounter(),
-		nodePrev = node;
-		;
-		nodePrev = nodePt,
-		nodePt = getUpstreamNode(nodePt, POSITION_COMPUTATIONAL)) {
+		nodePt.getReachCounter(), nodePrev = node;
+		; nodePrev = nodePt, nodePt = getUpstreamNode(nodePt, POSITION_COMPUTATIONAL)) {
 		// Initialize to indicate that we have not yet recursed...
 		didRecurse = false;
 		// Always use incremented node to figure out the top of the
@@ -3219,7 +3216,7 @@ public List findUpstreamFlowNodes(List upstreamFlowNodes,
 					+ nodePt.getDownstreamNode().getCommonID()
 					+ "\".  Recursing to find FLOW gage on trib");
 			}
-			upstreamFlowNodes = findUpstreamFlowNodes( upstreamFlowNodes, nodePt, prfGageData, true);
+			upstreamFlowNodes = findUpstreamFlowNodes( upstreamFlowNodes, nodePt, upstreamFlowNodeI, true);
 			if (Message.isDebugOn) {
 				Message.printDebug(dl, routine, "Back from recurse");
 			}
@@ -3230,9 +3227,8 @@ public List findUpstreamFlowNodes(List upstreamFlowNodes,
 		}
 		// This originally worked for makenet and should work for the
 		// admin tool now that we are using natural flow nodes...
-		else if (((nodePt.getType() == HydrologyNode.NODE_TYPE_FLOW) && nodePt.getIsNaturalFlow()) ){
-			// FIXME SAM 2008-03-15 Need to enable this in a generic way
-			// || (StateMod_PrfGageData.isSetprfTarget( nodePt.getCommonID(), prfGageData) >= 0)) {
+		else if (((nodePt.getType() == HydrologyNode.NODE_TYPE_FLOW) && nodePt.getIsNaturalFlow()) ||
+			(upstreamFlowNodeI.isSetprfTarget( nodePt.getCommonID()) >= 0)) {
 			// We are in a reach.  If this is a flow node, then
 			// update the list and return since we are done with the reach(tributary)...
 			if (Message.isDebugOn) {
@@ -3412,7 +3408,7 @@ public static HydrologyNode getDownstreamNode(HydrologyNode node, int flag) {
 			Message.printDebug(dl, routine,
 				"Found absolute downstream node \""
 				+ nodePt.getNetID()
-			 	+ "\"(\"" + nodePt.getCommonID() + "\")");
+			 	+ "\" (\"" + nodePt.getCommonID() + "\")");
 		}
 		return node;
 	}
