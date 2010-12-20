@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------------
-// HydroBase_Node - a representation of a node on a stream network
+// HydrologyNode - a representation of a node on a stream network
 // ----------------------------------------------------------------------------
 // Notes:	(1)	This code is meant to support (at least) three
 //			CRDSS applications:
@@ -97,7 +97,7 @@ public class HydrologyNode extends DMIDataObject
 /**
 Class name.
 */
-private final String __CLASS = "HydroBase_Node";
+private final String __CLASS = "HydrologyNode";
 
 /**
 Blank node for spacing nodes on the Makenet plot.
@@ -988,7 +988,7 @@ Draws this node on the network editor display.
 @param da the GRJComponentDrawingArea on which to draw the node.
 */
 private void drawNodeForNetwork(GRJComponentDrawingArea da) {
-	String routine = "HydroBase_Node.drawNetwork";
+	String routine = "HydrologyNode.drawNetwork";
 
 	double symbolSize = 0;
 	// Symbol to be drawn as core - others may be drawn to decorate and reservoir symbol orientation
@@ -1145,7 +1145,7 @@ private void drawNodeForNetwork(GRJComponentDrawingArea da) {
 			GRDrawingAreaUtil.setColor(da, GRColor.black);
 		}
 	}
-	Message.printStatus(2, routine, "Drawing symbol " + symbol );
+	//Message.printStatus(2, routine, "Drawing symbol " + symbol );
 	GRDrawingAreaUtil.drawSymbol(da, symbol, __x, __y, symbolSize, GRUnits.DEVICE,0);
 
 	// Draw a larger circle around decorator nodes
