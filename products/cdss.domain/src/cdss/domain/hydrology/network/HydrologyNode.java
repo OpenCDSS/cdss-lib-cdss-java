@@ -1662,6 +1662,14 @@ public long getStreamNumber() {
 }
 
 /**
+Return the symbol used with the node.
+*/
+public GRSymbol getSymbol ()
+{
+	return __symbol;
+}
+
+/**
 Returns the label direction in a format that a proplist will know -- one of
 the string values from GRText.  This assumes the string format is between 
 1 and 9.  Any other values will result in "AboveCenter" being returned.
