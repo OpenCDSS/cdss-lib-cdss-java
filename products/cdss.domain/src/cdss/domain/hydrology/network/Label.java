@@ -1,7 +1,7 @@
 package cdss.domain.hydrology.network;
 
 /**
-Inner class to store label data.
+Simple class to store label data.
 */
 public class Label {
 
