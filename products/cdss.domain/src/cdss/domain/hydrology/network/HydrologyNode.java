@@ -272,11 +272,13 @@ Area * precip as float.  Makenet-specific.
 private double __water;
 
 /**
-Plotting coordinates for node.  Makenet-specific.
+Plotting X coordinate for node, in virtual page space.
 */
-private double
-	__x, 
-	__y;
+private double __x;
+/**
+Plotting Y coordinate for node, in virtual page space.
+*/
+private double __y;
 
 /**
 Pointer to the node directly downstream of this node.
@@ -407,9 +409,9 @@ Area * precip as String.  Makenet-specific.
 private String __waterString;
 
 /**
-Vector of nodes directly upstream of this node.
+List of nodes directly upstream of this node.
 */
-private List __upstream;
+private List<HydrologyNode> __upstream = new Vector();
 
 //--------------------------------------------------------------------------
 // Data members used solely with the network drawing code.
@@ -549,8 +551,7 @@ private String __downstreamNodeID = null;
 /**
 The ids of all the nodes immediately upstream of this node.
 */
-private List __upstreamNodeIDs = null;
-//--------------------------------------------------------------------------
+private List<String> __upstreamNodeIDs = null;
 
 /**
 Constructor.  
@@ -683,8 +684,8 @@ public boolean addUpstreamNode(HydrologyNode upstream_node) {
 }
 
 /**
-Adds an id to the Vector of upstream node ids.  Used by the network drawing code.
-@param id the id to add to the upstream node vector.  If the Vector is null it will first be created.
+Adds an id to the list of upstream node ids.  Used by the network drawing code.
+@param id the id to add to the upstream node vector.  If the list is null it will first be created.
 */
 public void addUpstreamNodeID(String id) {
 	if (__upstreamNodeIDs == null) {
@@ -1927,7 +1928,7 @@ public int getUpstreamNodePosition(String commonID) {
 	HydrologyNode upstream;
 	for (int i = 0; i < size; i++) {
 		// Return the first one that matches...
-		upstream = (HydrologyNode)__upstream.get(i);
+		upstream = __upstream.get(i);
 		if (commonID.equalsIgnoreCase(upstream.getCommonID())) {
 			return i;
 		}
@@ -1936,10 +1937,10 @@ public int getUpstreamNodePosition(String commonID) {
 }
 
 /**
-Returns the Vector of upstream nodes.
-@return the Vector of upstream nodes.
+Returns the list of upstream nodes.
+@return the list of upstream nodes.
 */
-public List getUpstreamNodes() {
+public List<HydrologyNode> getUpstreamNodes() {
 	return __upstream;
 }
 
@@ -2159,13 +2160,13 @@ public void insertUpstreamNode(HydrologyNode node, int pos) {
 }
 
 /**
-Inserts multiple nodes into the Vector of upstream nodes.  Used by network diagramming tools.
-@param nodes a non-null Vector of nodes to be inserted upstream of this node.
+Inserts multiple nodes into the list of upstream nodes.  Used by network diagramming tools.
+@param nodes a non-null list of nodes to be inserted upstream of this node.
 @param pos the position at which to insert the nodes.
 */
-public void insertUpstreamNodes(List nodes, int pos) {
+public void insertUpstreamNodes(List<HydrologyNode> nodes, int pos) {
 	for (int i = nodes.size() - 1; i >= 0; i--) {
-		__upstream.add(pos,(HydrologyNode)nodes.get(i));
+		__upstream.add(pos,nodes.get(i));
 	}
 }
 
@@ -3049,11 +3050,17 @@ public void setTypeAbbreviation(String type) {
 }
 
 /**
-Sets the Vector nodes upstream of this node.  Used by the network diagramming tools.
-@param v the Vector of upstream nodes.  If null, then there are no nodes upstream of this node.
+Sets the list of nodes upstream of this node.  Used by the network diagramming tools.
+@param v the list of upstream nodes.  If null, then there are no nodes upstream of this node.
 */
-public void setUpstreamNodes(List v) {
-	__upstream = v;
+public void setUpstreamNodes(List<HydrologyNode> v)
+{
+	if ( v == null ) {
+		__upstream = new Vector();
+	}
+	else {
+		__upstream = v;
+	}
 }
 
 /**

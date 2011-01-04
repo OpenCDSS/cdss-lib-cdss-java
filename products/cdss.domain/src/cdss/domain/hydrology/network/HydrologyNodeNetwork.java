@@ -447,24 +447,28 @@ The line separator to be used.
 private String __newline = System.getProperty("line.separator");
 
 /**
-List of the annotations that are drawn with this network.
+List of the annotations that are drawn with this network.  Note that these are primitive
+annotations like lines, which should not be confused with the run-time annotations applied by
+software like the StateMod GUI (which do not persist in the network file).
 */
-private List<HydrologyNode> __annotations = null;
+private List<HydrologyNode> __annotationList = new Vector();
 
 /**
 Network labels.
 */
-private List<Label> __labels = new Vector(10, 10);
+private List<HydrologyNodeNetworkLabel> __labelList = new Vector();
 
+// TODO SAM 2011-01-04 The XMin, YMin, XMax, YMax properties might need to be stored with the layout
+// rather than the whole network in order to buffer the page boundaries properly.
 /**
 List for holding layouts read in from an XML file. 
 */
-private List<PropList> __layouts = null;
+private List<PropList> __layoutList = new Vector();
 
 /**
 List of links between nodes that are drawn with this network.
 */
-private List<PropList> __links = null;
+private List<PropList> __linkList = new Vector();
 
 /**
 Constructor.
@@ -511,7 +515,7 @@ String label) {
 	if (Message.isDebugOn) {
 		Message.printDebug(2, routine, "Storing label \"" + label + "\" at " + x + " " + y);
 	}
-	__labels.add(new Label(x, y, size, flag, label));
+	__labelList.add(new HydrologyNodeNetworkLabel(x, y, size, flag, label));
 }
 
 /**
@@ -763,10 +767,9 @@ boolean isNaturalFlow, boolean isImport) {
 /**
 Fills out the node in reach number, reach counter, tributary number, serial 
 number, and computational order number for a network of nodes.  These nodes
-were probably read in from a non-verbose XML file or from a 
-StateMod_RiverNodeNetwork list.
+were probably read in from a non-verbose XML file or from a StateMod_RiverNodeNetwork list.
 @param nodesV the list of nodes for which to calculate values.
-@param endFirst if true, then the first node in the Vector is the 
+@param endFirst if true, then the first node in the list is the 
 most-downstream node in the network (the END node).  If false, the the END
 node is the last node in the list.
 */
@@ -874,7 +877,7 @@ public void calculateNetworkNodeData(List<HydrologyNode> nodesV, boolean endFirs
 		}
 	}
 	
-	List networkV = new Vector(size);
+	List<HydrologyNode> networkV = new Vector(size);
 	for (int i = size - 1; i >= 0; i--) {
 		networkV.add(nodes[i]);		
 	}
@@ -1778,6 +1781,82 @@ public void deleteNode(String id) {
 }
 
 /**
+Gets the extents of the nodes in the network in the form of GRLimits, in network plotting coordinates
+(NOT alternative coordinates).  This does NOT consider the page layout as if editing with the editor.
+If any nodes have missing X or Y values, their values will not be considered in 
+determining the extents of the network.  If no nodes have locations, the
+GRLimits returned will be GRLimits(0, 0, 1, 1);
+@return the GRLimits that represent the bounds of the nodes in the network.
+*/
+public GRLimits determineExtentFromNetworkData()
+{
+	double lx = Double.MAX_VALUE;
+	double rx = -1;
+	double by = Double.MAX_VALUE;
+	double ty = -1;	
+	// TODO -- eliminate the need for hold nodes -- they signify an error in the network.
+	HydrologyNode holdNode = null;
+
+	HydrologyNode node = getMostUpstreamNode();	
+
+	boolean done = false;
+
+	while (!done) {
+		if (node.getX() >= 0) {
+			if (node.getX() < lx) {
+				lx = node.getX();
+			}
+			if (node.getX() > rx) {
+				rx = node.getX();
+			}
+		}
+		if (node.getY() >= 0) {
+			if (node.getY() < by) {
+				by = node.getY();
+			}
+			if (node.getY() > ty) {
+				ty = node.getY();
+			}
+		}
+		
+		if (node.getType() == HydrologyNode.NODE_TYPE_END) {
+			done = true;
+		}		
+		else if (node == holdNode) {
+			done = true;
+		}
+
+		holdNode = node;	
+		node = getDownstreamNode(node, POSITION_COMPUTATIONAL);		
+	}
+
+	int count = 0;
+
+	// Check to make sure that the bounds were determined properly.
+	// If for any reason none of the nodes have valid values, then 
+	// the rest of the code screw up.  If any of the following are true ...
+
+	if (lx == Double.MAX_VALUE) {
+		count++;
+	}
+	if (rx == Double.MIN_VALUE) {
+		count++;
+	}
+	if (by == Double.MAX_VALUE) {
+		count++;
+	}
+	if (ty == Double.MIN_VALUE) {
+		count++;
+	}
+
+	if (count != 0) {
+		return new GRLimits(0, 0, 1, 1);
+	}
+
+	return new GRLimits(lx, by, rx, ty);
+}
+
+/**
 Fills in missing locations downstream between the two nodes.
 @param node the node from which to fill downstream locations.
 @param ds the first downstream node with a valid location, or null if none do.
@@ -2411,8 +2490,8 @@ public void finalCheck(double lx, double by, double rx, double ty, boolean setBo
 	boolean done = false;
 	double w = rx - lx;
 	double h = ty - by;
-	double w5p = w * 0.05;
-	double h5p = h * 0.05;
+	double w5p = w * 0.05; // 5% of width
+	double h5p = h * 0.05; // 5% of height
 
 	String message = "";
 	while (!done) {
@@ -2436,8 +2515,7 @@ public void finalCheck(double lx, double by, double rx, double ty, boolean setBo
 				}
 			}
 			else {
-				// this is only done for networks that were
-				// read in from XML.
+				// This is only done for networks that were read in from XML.
 				// TODO (JTS - 2004-11-11)
 				// this code was not done originally in 
 				// the finalCheck() method, so just to make
@@ -2486,9 +2564,9 @@ throws Throwable {
 	__nodeHead = null;
 	__checkFP = null;
 	__newline = null;
-	__annotations = null;
-	__layouts = null;
-	__links = null;
+	__annotationList = null;
+	__layoutList = null;
+	__linkList = null;
 	__title = null;
 
 	super.finalize();
@@ -3311,11 +3389,19 @@ public String formatWDID(String wd, String id, int nodeType) {
 }
 
 /**
-Returns the list of annotations that accompany this network.
-@return the list of annotations that accompany this network.  Can be null.
+Returns the list of annotations that accompany this network.  Guaranteed to be non-null.
+@return the list of annotations that accompany this network.
 */
-public List<HydrologyNode> getAnnotations() {
-	return __annotations;
+public List<HydrologyNode> getAnnotationList() {
+	return __annotationList;
+}
+
+/**
+Returns the list of labels that accompany this network.  Guaranteed to be non-null.
+@return the list of labels that accompany this network.
+*/
+public List<HydrologyNodeNetworkLabel> getLabelList() {
+	return __labelList;
 }
 
 /**
@@ -3605,81 +3691,6 @@ public static HydrologyNode getDownstreamNode(HydrologyNode node, int flag) {
 }
 
 /**
-Gets the far extents of the nodes in the network in the form of GRLimits.
-If any nodes have missing X or Y values, their values will not be considered in 
-determining the far extents of the network.  If no nodes have locations, the
-GRLimits returned will be GRLimits(0, 0, 1, 1);
-@return the GRLimits that represent the far bounds of the nodes in the network.
-*/
-public GRLimits getExtents() {
-	double lx = Double.MAX_VALUE;
-	double rx = -1;
-	double by = Double.MAX_VALUE;
-	double ty = -1;	
-	// TODO -- eliminate the need for hold nodes -- they signify an error in the network.
-	HydrologyNode holdNode = null;
-
-	HydrologyNode node = getMostUpstreamNode();	
-
-	boolean done = false;
-
-	while (!done) {
-		if (node.getDBX() >= 0) {
-			if (node.getDBX() < lx) {
-				lx = node.getDBX();
-			}
-			if (node.getDBX() > rx) {
-				rx = node.getDBX();
-			}
-		}
-		if (node.getDBY() >= 0) {
-			if (node.getDBY() < by) {
-				by = node.getDBY();
-			}
-			if (node.getDBY() > ty) {
-				ty = node.getDBY();
-			}
-		}
-		
-		if (node.getType() == HydrologyNode.NODE_TYPE_END) {
-			done = true;
-		}		
-		else if (node == holdNode) {
-			done = true;
-		}
-
-		holdNode = node;	
-		node = getDownstreamNode(node, POSITION_COMPUTATIONAL);		
-	}
-
-	int count = 0;
-
-	// check to make sure that the bounds were determined properly.
-	// If for any reason none of the nodes have valid values, then 
-	// the rest of the code screw up.  If any of the following are 
-	// true ...
-
-	if (lx == Double.MAX_VALUE) {
-		count++;
-	}
-	if (rx == Double.MIN_VALUE) {
-		count++;
-	}
-	if (by == Double.MAX_VALUE) {
-		count++;
-	}
-	if (ty == Double.MIN_VALUE) {
-		count++;
-	}
-
-	if (count != 0) {
-		return new GRLimits(0, 0, 1, 1);
-	}
-
-	return new GRLimits(lx, by, rx, ty);
-}
-
-/**
 Return the name of the input file for this network, or null if not available (is being created).
 @return the name of the input file.
 */
@@ -3692,8 +3703,8 @@ public String getInputName ()
 Returns the layout list read in from XML. 
 @return the layout list read in from XML.  Can be null.
 */
-public List<PropList> getLayouts() {
-	return __layouts;
+public List<PropList> getLayoutList() {
+	return __layoutList;
 }
 
 /**
@@ -3729,8 +3740,8 @@ public double getLegendY() {
 Returns the list of links between nodes in the network.
 @return the list of links between nodes in the network.
 */
-public List<PropList> getLinks() {
-	return __links;
+public List<PropList> getLinkList() {
+	return __linkList;
 }
 
 /**
@@ -3836,7 +3847,7 @@ throws Exception {
 	int nodeType = 0;
 	int nnodeTypes = nodeTypes.length;
 	String commonID = null;
-	List v = null;
+	List<String> v = null;
 
 	// Traverse from upstream to downstream...
 	for (nodePt = getUpstreamNode(getDownstreamNode(__nodeHead, POSITION_ABSOLUTE), POSITION_ABSOLUTE);
@@ -3875,7 +3886,7 @@ throws Exception {
 				// Get the string before the "." in case some
 				// ISF or other modified identifier is used...
 				v = StringUtil.breakStringList(commonID, ".", 0);
-				ids.add((String)v.get(0));
+				ids.add(v.get(0));
 				// Note that if the _Dwn convention is used,
 				// then the structure should be found when the
 				// upstream terminus is queried and the
@@ -3942,6 +3953,44 @@ protected String getNodeLabel(HydrologyNode node, int lt) {
 		label = node.getNetID();
 	}
 	return label;
+}
+
+/**
+Returns a list of all the nodes in the network.  This can be used when (re)building networks from raw
+node data, such as when merging networks read from XML files.  All nodes are returned, including confluences
+and end node (anything that would persist to a file).
+@return a list of all the nodes that are the specified type.  The list is
+guaranteed to be non-null and is in the order upstream to downstream.
+*/
+public List<HydrologyNode> getNodeList()
+{	List<HydrologyNode> nodeList = new Vector();
+
+	HydrologyNode node = getMostUpstreamNode();
+	// TODO -- eliminate the need for hold nodes -- they signify an error in the network.
+	HydrologyNode hold = null;
+	int nodeType = 0;
+	while (true) {
+		if ( node == null ) {
+			// End of network...
+			return nodeList;
+		}
+		// Add to the list
+		nodeList.add(node);
+		// Check for the end node
+		nodeType = node.getType();
+		if ( nodeType == HydrologyNode.NODE_TYPE_END ) {
+			return nodeList;
+		}
+		
+		// Increment the node to the next computational downstream...
+
+		hold = node;
+		node = getDownstreamNode(node,POSITION_COMPUTATIONAL);
+		// to avoid infinite loops when the network is not built properly
+		if (hold == node) {
+			return nodeList;
+		}
+	}
 }
 
 /**
@@ -4988,11 +5037,15 @@ public void resetComputationalOrder() {
 
 /**
 Sets the annotations associated with this network.
-@param annotations the Vector of annotations associated with this network. 
-Can be null.
+@param annotationList the list of annotations associated with this network.
 */
-public void setAnnotations(List<HydrologyNode> annotations) {
-	__annotations = annotations;
+public void setAnnotationList(List<HydrologyNode> annotationList) {
+	if ( annotationList == null ) {
+		__annotationList = new Vector();
+	}
+	else {
+		__annotationList = annotationList;
+	}
 }
 
 /**
@@ -5078,10 +5131,16 @@ public void setLabelType(int label_type) {
 
 /**
 Sets the layout list read in from XML.
-@param layouts the layout list read in from XML.  Can be null.
+@param layoutList the layout list read in from XML.
 */
-protected void setLayouts(List<PropList> layouts) {
-	__layouts = layouts;
+protected void setLayoutList(List<PropList> layoutList)
+{
+	if ( layoutList == null ) {
+		__layoutList = new Vector();
+	}
+	else {
+		__layoutList = layoutList;
+	}
 }
 
 /**
@@ -5097,10 +5156,16 @@ public void setLegendPosition(double legendX, double legendY) {
 
 /**
 Sets the list of links between nodes in the network.
-@param links the list of links between nodes in the network.  Can be null.
+@param linkList the list of links between nodes in the network.
 */
-public void setLinks(List<PropList> links) {
-	__links = links;
+public void setLinkList(List<PropList> linkList)
+{
+	if ( linkList == null ) {
+		__linkList = new Vector();
+	}
+	else {
+		__linkList = linkList;
+	}
 }
 
 /**
@@ -5113,10 +5178,10 @@ public void setLx ( double lx )
 }
 
 /**
-Sets up the linked list network based on a Vector of the nodes in the network.
+Sets up the linked list network based on a list of the nodes in the network.
 The nodes are checked to see which one is the head of the network and that node
 is stored internally as __nodeHead.
-@param v the Vector of HydrologyNode nodes that comprise a network.
+@param v the list of nodes that comprise a network.
 */
 public void setNetworkFromNodes(List<HydrologyNode> v) {
 	__nodeCount = v.size();
@@ -5125,7 +5190,7 @@ public void setNetworkFromNodes(List<HydrologyNode> v) {
 	for (HydrologyNode node : v) {
 		ds = node.getDownstreamNode();
 		
-		if (ds == null || node.getType() == HydrologyNode.NODE_TYPE_END) {
+		if ( (ds == null) || (node.getType() == HydrologyNode.NODE_TYPE_END) ) {
 			__nodeHead = node;
 			return;
 		}
@@ -5404,12 +5469,19 @@ throws Exception
 Writes the network out as an XML network file.  This method should be used
 when writing out a network that was already read from an XML file.  
 @param filename the name of the file to which to write.
+@param networkExtent the extent of the network corresponding to the XMin, Ymin, XMax, YMax properties
+in the XML file, which should consider the page layout.  If null, the extent will be computed from data.
 @throws Exception if there is an error writing the network.
 */
-public void writeXML(String filename) 
-throws Exception {
-	writeXML(filename, getExtents(), getLayouts(), getAnnotations(), 
-		getLinks(), getLegendLocation());
+public void writeXML(String filename ) 
+throws Exception
+{
+	// FIXME SAM 2011-01-03 Problem is that if a network is read from XML and then
+	// immediately written without supplying limits, the limits are recomputed from data and not the
+	// page layout.
+	// What could be done is to get the extent from the data (including legend and annotations?) and
+	// then center on the page limits with some buffer around the edge nodes to allow for labels, and growth.
+	writeXML(filename, determineExtentFromNetworkData(), getLayoutList(), getAnnotationList(), getLinkList(), getLegendLocation());
 }
 
 /**
@@ -5418,8 +5490,7 @@ primarily by programs that need to write out a new XML network, or which
 read in an old (non-XML) network file and want to write out an XML version.
 @param filename the name of the file to which to write.
 @param limits the limits of the network.  They will be used to write out the
-extents of the network.  Can be null, in which case they will be calculated by
-a call to getExtents().
+extents of the network.  Can be null, in which case they will be calculated by a call to getExtents().
 @param layouts the page layouts to be written.  Each layout in this Vector 
 will be written as a separate PageLayout section.  Can be null or empty, in 
 which case no layouts will be written to the file.
@@ -5435,12 +5506,15 @@ in which case no legend limits will be written and the legend will be
 automatically placed on the network next time the network is opened from the file.
 @throws Exception if there is an error writing the network.
 */
-public void writeXML(String filename, GRLimits limits, List layouts,
-		List annotations, List links, GRLimits legendLimits) 
-throws Exception {
+public void writeXML(String filename, GRLimits limits, List<PropList> layouts,
+		List<HydrologyNode> annotations, List<PropList> links, GRLimits legendLimits) 
+throws Exception
+{	String routine = getClass().getName() + ".writeXML";
+	Message.printStatus(2, routine, "Writing XML network with limits=" + limits );
 	filename = IOUtil.getPathUsingWorkingDir(filename);
 	if (limits == null) {
-		limits = getExtents();
+		limits = determineExtentFromNetworkData();
+		Message.printStatus(2, routine, "Calculated XML network limits=" + limits );
 	}
 	PrintWriter out = new PrintWriter(new FileOutputStream(filename));
 
@@ -5535,7 +5609,8 @@ format =
 + comment + "   <   ->   &lt;" + n
 + comment + n
 + comment + "<StateMod_Network>     Indicates the bounds of network" + n
-+ comment + "                       definition" + n
++ comment + "                       definition, based on node data placed" + n
++ comment + "                       to fit on the page size for the layout." + n
 + comment + n
 + comment + "   XMin                The minimum X coordinate used to " + n
 + comment + "                       display the network, determined from"  +n
@@ -5828,8 +5903,7 @@ format =
 		// default ...
 		out.print("    <PageLayout ID = \"Page Layout #1\"" + n);
 		out.print("        PaperSize = \"C\"" + n);
-		out.print("        PageOrientation = \""
-			+ "Landscape\"" + n);
+		out.print("        PageOrientation = \"Landscape\"" + n);
 		out.print("        NodeLabelFontSize = \"10\"" + n);
 		out.print("        NodeSize = \"20\"/>" + n);
 		out.print("        IsDefault = \"True\"/>" + n);
