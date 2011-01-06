@@ -434,7 +434,7 @@ private int __labelType;
 /**
 The count of nodes in the network.
 */
-private int __nodeCount;		// Counter for nodes in network.
+private int __nodeCount;
 
 /**
 Check file to be used by modelers.
@@ -467,6 +467,7 @@ private List<PropList> __layoutList = new Vector();
 
 /**
 List of links between nodes that are drawn with this network.
+The PropList contains FromNodeID and ToNodeID as the properties.
 */
 private List<PropList> __linkList = new Vector();
 
@@ -508,8 +509,7 @@ Store a label to be drawn on the plot.
 @param flag Text orientation.
 @param label Text for label.
 */
-protected void addLabel(double x, double y, double size, int flag,
-String label) {
+protected void addLabel(double x, double y, double size, int flag, String label) {
 	String routine = "addLabel";
 
 	if (Message.isDebugOn) {
@@ -527,8 +527,7 @@ Adds a node the network.
 @param isNaturalFlow whether the node is a natural flow node or not.
 @param isImport whether the node is an import node or not.
 */
-public void addNode(String id, int type, String usid, String dsid,
-boolean isNaturalFlow, boolean isImport) {
+public void addNode(String id, int type, String usid, String dsid, boolean isNaturalFlow, boolean isImport) {
 /*
 	Message.printStatus(2, "", "Adding '" + id + "', linking upstream to '"
 		+ usid + " and downstream to '" + dsid + "'  (" + type + ")"
@@ -767,14 +766,16 @@ boolean isNaturalFlow, boolean isImport) {
 /**
 Fills out the node in reach number, reach counter, tributary number, serial 
 number, and computational order number for a network of nodes.  These nodes
-were probably read in from a non-verbose XML file or from a StateMod_RiverNodeNetwork list.
+were probably read in from an XML file, StateMod_RiverNodeNetwork list, or from a simple list
+of nodes (e.g., from network append/merge).
 @param nodesV the list of nodes for which to calculate values.
 @param endFirst if true, then the first node in the list is the 
 most-downstream node in the network (the END node).  If false, the the END
 node is the last node in the list.
 */
-public void calculateNetworkNodeData(List<HydrologyNode> nodesV, boolean endFirst) {
-	// first put the nodes into an array for easy and quick traversal. 
+public void calculateNetworkNodeData(List<HydrologyNode> nodesV, boolean endFirst)
+{	String routine = getClass().getName() + ".calculateNetworkNodeData";
+	// First put the nodes into an array for easy and quick traversal. 
 	// In the array, make sure the END node is always the first one found.
 	int size = nodesV.size();
 	HydrologyNode[] nodes = new HydrologyNode[size];
@@ -857,11 +858,19 @@ public void calculateNetworkNodeData(List<HydrologyNode> nodesV, boolean endFirs
 
 	// connect the nodes
 	String dsID = null;
+	Object nodeNumObject;
 	Integer tempI = null;
 	for (int i = 0; i < size; i++) {
 		dsID = nodes[i].getDownstreamNodeID();
 		if (dsID != null && !dsID.equals("") && !dsID.equals("null")) {
-			nodeNum = ((Integer)hash.get(dsID)).intValue();
+			nodeNumObject = hash.get(dsID);
+			if ( nodeNumObject == null ) {
+				String message = "Processing node \"" + nodes[i].getCommonID() +
+				" - downstream ID \"" + dsID + "\" not found in hash.";
+				Message.printStatus(2, routine, message );
+				throw new RuntimeException ( message );
+			}
+			nodeNum = ((Integer)nodeNumObject).intValue();
 			nodes[i].setDownstreamNode(nodes[nodeNum]);
 		}
 		usIDs = nodes[i].getUpstreamNodeIDs();
@@ -1010,13 +1019,13 @@ unique ID, the first time it is called (i.e., not by itself) this parameter
 should be true.  When the method calls itself, this parameter is false.
 @return an ID that is unique within the network.
 */
-private String checkUniqueID(String id, boolean first) {
+private String checkUniqueID(String id, boolean first)
+{
 	boolean done = false;
 	HydrologyNode node = getMostUpstreamNode();
 	int count = 0;
 
-	// first go through all the nodes and count how many have the same
-	// id as that passed in
+	// First go through all the nodes and count how many have the same id as that passed in
 	while (!done) {
 		if (node == null) {
 			done = true;
@@ -1036,12 +1045,12 @@ private String checkUniqueID(String id, boolean first) {
 	}
 
 	if (count == 0) {
-		// if no other nodes have that id, it is unique and can be returned
+		// If no other nodes have that id, it is unique and can be returned
 		return id;
 	}
 	else {	
 		if (!first) {
-			// if this was called by itself then it means that
+			// If this was called by itself then it means that
 			// an attempt to check a different id for uniqueness
 			// failed at this point.  It needs to return a 
 			// different id that that which was passed in for 
@@ -1049,10 +1058,9 @@ private String checkUniqueID(String id, boolean first) {
 			return id + "----------X";
 		}
 
-		// the id is not unique.  An attempt will be made to create
+		// The id is not unique.  An attempt will be made to create
 		// a unique id by appending "_" and a number to the end of
-		// the passed-in ID.  The number will be incremented until
-		// a unique value is found.
+		// the passed-in ID.  The number will be incremented until a unique value is found.
 		String newID = null;
 		for (int i = count;;i++) {
 			newID = id + "_" + i;
@@ -1101,8 +1109,8 @@ public void convertNodeTypes() {
 
 
 /**
-Create the indented river network as a vector of strings
-@return Vector of String containing output.
+Create the indented river network as a list of strings
+@return list of String containing output.
 */
 public List<String> createIndentedRiverNetworkStrings() {
 	int dl = 30;
@@ -1363,7 +1371,7 @@ public boolean createRiverOrderFile(String basename, int flag) {
 Removes a node from the network, and maintains the connections between the 
 upstream and downstream nodes relative to the node that is removed.  This 
 code is very inefficient and should not be used often.  
-<br>TODO (JTS - 2004-04-14)<br> Inefficient!!  This could really be improved.
+TODO (JTS - 2004-04-14)<br> Inefficient!!  This could really be improved.
 @param id the id of the node to delete.
 */
 public void deleteNode(String id) {
@@ -1371,7 +1379,7 @@ public void deleteNode(String id) {
 	HydrologyNode node = getMostUpstreamNode();
 	List<HydrologyNode> v = new Vector();
 
-	// first loop through all the nodes and put them in a Vector so that
+	// First loop through all the nodes and put them in a list so that
 	// they can be accessed via a random access method.  
 	while (!done) {
 		if (node == null) {
@@ -1402,15 +1410,15 @@ public void deleteNode(String id) {
 	//int tribNum = 0;
 	//int upCount = 0;
 	
-	// the the ids of the nodes upstream from the node to be deleted
+	// The ids of the nodes upstream from the node to be deleted
 	String[] delUsid = null;
-	// the id of the node downstream from the node to be deleted
+	// The id of the node downstream from the node to be deleted
 	String delDsid = null;
 	
 	int comp = -1;
 	int serial = -1;
 
-	// loop through the vector and put the nodes into the array for even faster access.
+	// Loop through the list and put the nodes into the array for even faster access.
 	for (int i = 0; i < size; i++) {
 		node = v.get(i);
 		
@@ -1423,7 +1431,7 @@ public void deleteNode(String id) {
 		}
 
 		if (node.getCommonID().equals(id)) {
-			// for the node that is to be deleted, store its
+			// For the node that is to be deleted, store its
 			// downstream node and the id of the downstream node, 
 			// the IDs of its upstream nodes, its tributary number
 			// and the count of the number of upstream nodes.
@@ -1448,14 +1456,14 @@ public void deleteNode(String id) {
 		}
 	}
 
-//	if (IOUtil.testing()) {
-//		Message.printStatus(2, "", "delDsid: '" + delDsid + "'");
-//		if (delUsid != null) {
-//		for (int i = 0; i < delUsid.length; i++) {
-//			Message.printStatus(2, "", "delUsid[" + i + "]: '" + delUsid[i] + "'");
-//			}
-//		}
-//	}
+	//	if (IOUtil.testing()) {
+	//		Message.printStatus(2, "", "delDsid: '" + delDsid + "'");
+	//		if (delUsid != null) {
+	//		for (int i = 0; i < delUsid.length; i++) {
+	//			Message.printStatus(2, "", "delUsid[" + i + "]: '" + delUsid[i] + "'");
+	//			}
+	//		}
+	//	}
 
 	// to represent the different size of the Vector vs the array
 	size--;
@@ -1463,7 +1471,6 @@ public void deleteNode(String id) {
 	// the ids of the upstream nodes from the node downstream of the node being deleted.
 	String[] dsusid = dsNode.getUpstreamNodesIDs();
 
-	
 //	if (IOUtil.testing()) {
 //		if (dsusid != null) {
 //			for (int i = 0; i < dsusid.length; i++) {
@@ -1472,7 +1479,7 @@ public void deleteNode(String id) {
 //		}
 //	}
 
-	// update the tributary number for all the nodes at the same level
+	// Update the tributary number for all the nodes at the same level
 	// as the deleted node.  That is, all the nodes upstream of the 
 	// deleted node's downstream node.  Just update their tributary 
 	// number to account for the deleted node.
@@ -1484,17 +1491,15 @@ public void deleteNode(String id) {
 			if (nodes[i].getCommonID().equals(dsusid[j])) {
 				nodes[i].setTributaryNumber(tn++);
 				if (IOUtil.testing()) {
-					Message.printStatus(2, "", "1: Node '"
-						+ nodes[i].getCommonID() + "'"
-						+ " trib set to: " 
-						+nodes[i].getTributaryNumber());
+					Message.printStatus(2, "", "1: Node '" + nodes[i].getCommonID() + "'"
+						+ " trib set to: " + nodes[i].getTributaryNumber());
 				}
 			}
 		}
 	}
 	*/
 		
-	// update the tributary number for all the nodes upstream of the 
+	// Update the tributary number for all the nodes upstream of the 
 	// deleted node to account for the deleted node.
 	/*
 	for (int i = 0; i < size; i++) {
@@ -1788,12 +1793,12 @@ determining the extents of the network.  If no nodes have locations, the
 GRLimits returned will be GRLimits(0, 0, 1, 1);
 @return the GRLimits that represent the bounds of the nodes in the network.
 */
-public GRLimits determineExtentFromNetworkData()
+public GRLimits determineExtentFromNetworkData( )
 {
-	double lx = Double.MAX_VALUE;
-	double rx = -1;
-	double by = Double.MAX_VALUE;
-	double ty = -1;	
+	double lx = Double.NaN;
+	double rx = Double.NaN;
+	double by = Double.NaN;
+	double ty = Double.NaN;	
 	// TODO -- eliminate the need for hold nodes -- they signify an error in the network.
 	HydrologyNode holdNode = null;
 
@@ -1801,24 +1806,27 @@ public GRLimits determineExtentFromNetworkData()
 
 	boolean done = false;
 
+	double x, y;
 	while (!done) {
-		if (node.getX() >= 0) {
-			if (node.getX() < lx) {
-				lx = node.getX();
+		x = node.getX();
+		y = node.getY();
+		if ( !Double.isNaN(x) ) {
+			if ( Double.isNaN(lx) || (x < lx) ) {
+				lx = x;
 			}
-			if (node.getX() > rx) {
-				rx = node.getX();
-			}
-		}
-		if (node.getY() >= 0) {
-			if (node.getY() < by) {
-				by = node.getY();
-			}
-			if (node.getY() > ty) {
-				ty = node.getY();
+			if ( Double.isNaN(rx) || (x > rx) ) {
+				rx = x;
 			}
 		}
-		
+		if ( !Double.isNaN(y)) {
+			if ( Double.isNaN(by) || (y < by) ) {
+				by = y;
+			}
+			if ( Double.isNaN(ty) || (y > ty) ) {
+				ty = y;
+			}
+		}
+			
 		if (node.getType() == HydrologyNode.NODE_TYPE_END) {
 			done = true;
 		}		
@@ -2774,7 +2782,7 @@ not recognize confluence and other nodes that are only used in the diagram.
 @return the next downstream node that is a physical node.
 */
 public static HydrologyNode findNextRealDownstreamNode(HydrologyNode node) {
-	HydrologyNode	nodePt = node;
+	HydrologyNode nodePt = node;
 
 	while (true) {
 		nodePt = getDownstreamNode(nodePt, POSITION_RELATIVE);
@@ -2936,7 +2944,7 @@ public HydrologyNode findNode(String commonID) {
 		if (nodePt.getCommonID().equalsIgnoreCase(commonID)) {
 			return nodePt;
 		}
-		// Break if we are at the end of the list...
+		// Break if at the bottom of the network.
 		if ((nodePt == null) || (nodePt.getType() == HydrologyNode.NODE_TYPE_END)) {
 			done = true;
 			break;
@@ -2966,10 +2974,8 @@ public static HydrologyNode findReachConfluenceNext(HydrologyNode node) {
 	// upstream nodes.  If there are none, then we are at the end of the system...
 	if ((node.getReachCounter() == 1) && (node.getNumUpstreamNodes() == 0)){
 		if (Message.isDebugOn) {
-			Message.printDebug(dl, routine,
-				"\"" + node.getCommonID()
-				+ "\" is at the top of the system (last node "
-				+ "on main stem)");
+			Message.printDebug(dl, routine, "\"" + node.getCommonID()
+				+ "\" is at the top of the system (last node on main stem)");
 		}
 		return node;
 	}
@@ -2986,22 +2992,17 @@ public static HydrologyNode findReachConfluenceNext(HydrologyNode node) {
 	// First get the node off the previous stem...
 	nodePt = getDownstreamNode(node, POSITION_REACH);
 	if (Message.isDebugOn) {
-		Message.printDebug(dl, routine,
-			"Downstream node for reach containing \"" 
+		Message.printDebug(dl, routine, "Downstream node for reach containing \"" 
 			+ node.getCommonID() + "\" is \"" + nodePt.getCommonID()
 			+ "\" node_in_reach=" + nodePt.getNodeInReachNumber()
 			+ " reachCounter=" + nodePt.getReachCounter());
 	}
 
-	// Make sure that this is not the bottom of the system.  If it is
-	// then there is no upstream reach...
-	if ((nodePt.getReachCounter() == 1) 
-		&& (nodePt.getNodeInReachNumber() == 1)) {
+	// Make sure that this is not the bottom of the system.  If it is then there is no upstream reach...
+	if ((nodePt.getReachCounter() == 1) && (nodePt.getNodeInReachNumber() == 1)) {
 		if (Message.isDebugOn) {
-			Message.printDebug(dl, routine, "\""
-				+ node.getCommonID()
-				+ "\" is at the top of the system "
-				+ "(last node on main stem)");
+			Message.printDebug(dl, routine, "\"" + node.getCommonID()
+				+ "\" is at the top of the system (last node on main stem)");
 		}
 		return node;
 	}
@@ -3018,13 +3019,10 @@ public static HydrologyNode findReachConfluenceNext(HydrologyNode node) {
 
 	// Make sure that this is not the main stem.  If it is and we have only
 	// one upstream node then there is no upstream reach...
-	if ((nodePt2.getReachCounter() == 1) 
-		&& (nodePt2.getNumUpstreamNodes() == 1)) {
+	if ((nodePt2.getReachCounter() == 1) && (nodePt2.getNumUpstreamNodes() == 1)) {
 		if (Message.isDebugOn) {
-			Message.printDebug(dl, routine,
-				"\"" + node.getCommonID()
-				+ "\" is at the top of the system "
-				+ "(last node on main stem)");
+			Message.printDebug(dl, routine, "\"" + node.getCommonID()
+				+ "\" is at the top of the system (last node on main stem)");
 		}
 		return node;
 	}
@@ -3032,13 +3030,10 @@ public static HydrologyNode findReachConfluenceNext(HydrologyNode node) {
 	// Now, if we are on the main stem and there are no more upstream
 	// nodes, then we are at the end of the system.  Most likely there
 	// will not be a confluence at the end of the mainstem, but put in check anyhow...
-	if ((nodePt2.getReachCounter() == 1) &&
-		(nodePt2.getNumUpstreamNodes() == 0)) {
+	if ((nodePt2.getReachCounter() == 1) && (nodePt2.getNumUpstreamNodes() == 0)) {
 		if (Message.isDebugOn) {
-			Message.printDebug(dl, routine,
-				"\"" + node.getCommonID()
-				+ "\" is at the top of the system "
-				+ "(last node on main stem)");
+			Message.printDebug(dl, routine, "\"" + node.getCommonID()
+				+ "\" is at the top of the system (last node on main stem)");
 		}
 		return node;
 	}
@@ -3050,24 +3045,18 @@ public static HydrologyNode findReachConfluenceNext(HydrologyNode node) {
 
 		// This will probably cause an exception in Java.  Need to check into it...
 		// TODO (JTS - 2003-10-21) the above comment was made X years ago ... status?
-		if (nodePt2.getUpstreamNode(nodePt.getTributaryNumber()) ==
-			null) {
+		if (nodePt2.getUpstreamNode(nodePt.getTributaryNumber()) == null) {
 			// Top of the system...
 			if (Message.isDebugOn) {
-				Message.printDebug(dl, routine,
-					"At top of system node \""
-					+ nodePt2.getCommonID() + "\"");
+				Message.printDebug(dl, routine, "At top of system node \"" + nodePt2.getCommonID() + "\"");
 			}
 			return nodePt2;
 		}
 		// Reset pointer to be appropriate upstream...
 		nodePt2 = nodePt2.getUpstreamNode(nodePt.getTributaryNumber());
 		if (Message.isDebugOn) {
-			Message.printDebug(dl, routine,
-				"Go to next reach (reachnum="
-				+ nodePt2.getTributaryNumber()
-				+ ") first node \"" 
-				+ nodePt2.getCommonID() + "\"");
+			Message.printDebug(dl, routine, "Go to next reach (reachnum=" + nodePt2.getTributaryNumber()
+				+ ") first node \"" + nodePt2.getCommonID() + "\"");
 		}
 		return nodePt2;
 	}
@@ -3075,16 +3064,11 @@ public static HydrologyNode findReachConfluenceNext(HydrologyNode node) {
 		// There are no other reaches for the confluence node at the
 		// beginning of this reach.  We are not at the top of the
 		// system because that would have been caught above.
-		// Therefore, we need to back up to the parent reach of this
-		// reach and then go forward.
+		// Therefore, we need to back up to the parent reach of this reach and then go forward.
 		if (Message.isDebugOn) {
-			Message.printDebug(dl, routine,
-				"Node \"" + nodePt2.getCommonID()
-				+ "\" has nupstream=" 
-				+ nodePt2.getNumUpstreamNodes()
-				+ " and found most upstream node \""
-				+ node.getCommonID()
-				+ "\" in reach - recursing");
+			Message.printDebug(dl, routine, "Node \"" + nodePt2.getCommonID() + "\" has nupstream=" 
+				+ nodePt2.getNumUpstreamNodes() + " and found most upstream node \""
+				+ node.getCommonID() + "\" in reach - recursing");
 		}
 		return findReachConfluenceNext(nodePt2);
 	}
@@ -3119,7 +3103,7 @@ public HydrologyNode findUpstreamNaturalFowNodeInReach(HydrologyNode node) {
 			break;
 		}
 	}
-	// We were unable to find it...
+	// Unable to find it...
 	return null;
 }
 
@@ -3131,7 +3115,8 @@ set 'recursing' to false -- will be set to true if this method recursively calls
 @param node the node from which to look upstream
 @param recursing false if calling from outside this method, true if calling recursively.
 */
-public List findUpstreamFlowNodes(List upstreamFlowNodes, HydrologyNode node, boolean recursing) {
+public List<HydrologyNode> findUpstreamFlowNodes(List<HydrologyNode> upstreamFlowNodes,
+	HydrologyNode node, boolean recursing) {
 	return findUpstreamFlowNodes(upstreamFlowNodes, node, null, recursing);
 }
 
@@ -3147,8 +3132,8 @@ functionality when processing StateMod_StreamEstimate_Coefficients in StateDMI (
 that should be treated as upstream gages).
 @param recursing false if calling from outside this method, true if calling recursively.
 */
-public List findUpstreamFlowNodes(List upstreamFlowNodes,
-		HydrologyNode node, UpstreamFlowNodeI upstreamFlowNodeI, boolean recursing)
+public List<HydrologyNode> findUpstreamFlowNodes(List upstreamFlowNodes,
+	HydrologyNode node, UpstreamFlowNodeI upstreamFlowNodeI, boolean recursing)
 {
 	String routine = "HydroBase_NodeNetwork.findUpstreamFlowNodes";
 
@@ -3192,14 +3177,12 @@ public List findUpstreamFlowNodes(List upstreamFlowNodes,
 		didRecurse = false;
 		// Always use incremented node to figure out the top of the
 		// reach.  If the first node is the original node, then the
-		// incremented node will still be on that reach, even if it
-		// is a confluence node.
+		// incremented node will still be on that reach, even if it is a confluence node.
 		//
 		// If the first node is a confluence, then the incremented
 		// node will be the first node on the reach that we are
 		// interested in.  If there is only one node on a reach, then
-		// the SetNodeToUpstream function will return the same node,
-		// which is OK.
+		// the SetNodeToUpstream function will return the same node, which is OK.
 		if (nodePrev.equals(node)) {
 			if (recursing) {
 				nodeReachTop = getUpstreamNode(nodePt, POSITION_REACH);
@@ -3208,8 +3191,7 @@ public List findUpstreamFlowNodes(List upstreamFlowNodes,
 				nodeReachTop = getUpstreamNode(node, POSITION_REACH);
 			}
 			if (Message.isDebugOn) {
-				Message.printDebug(dl, routine,
-					"Node at top of reach is \"" + nodeReachTop.getCommonID() + "\"");
+				Message.printDebug(dl, routine, "Node at top of reach is \"" + nodeReachTop.getCommonID() + "\"");
 			}
 			if (!recursing && (node.equals(nodeReachTop))) {
 				// The node of interested was at the top of
@@ -3225,11 +3207,8 @@ public List findUpstreamFlowNodes(List upstreamFlowNodes,
 				// We do not want to reset if recursing
 				// because we may have to recurse again.
 				if (Message.isDebugOn) {
-					Message.printDebug(dl, routine,
-						"Resetting node from loop to "
-						+ "be top of reach \""
-						+ nodeReachTop.getCommonID() 
-						+ "\"");
+					Message.printDebug(dl, routine, "Resetting node from loop to be top of reach \""
+						+ nodeReachTop.getCommonID() + "\"");
 				}
 				nodePt = nodeReachTop;
 				// Actually, if the initial node is at the top
@@ -3241,26 +3220,21 @@ public List findUpstreamFlowNodes(List upstreamFlowNodes,
 		if (nodePt == null) {
 			// Top of system?
 			if (Message.isDebugOn) {
-				Message.printWarning(1, routine,
-					"nodePt is NULL?!");
+				Message.printWarning(1, routine, "nodePt is NULL?!");
 			}
 			break;
 		}
 		if (Message.isDebugOn) {
-			Message.printDebug(dl, routine,
-				"Checking node \"" + nodePt.getCommonID()
-				+ "\" reachCounter=" + nodePt.getReachCounter()
-				+ " node_in_reach=" 
+			Message.printDebug(dl, routine, "Checking node \"" + nodePt.getCommonID()
+				+ "\" reachCounter=" + nodePt.getReachCounter() + " node_in_reach=" 
 				+ nodePt.getNodeInReachNumber());
 		}
 		if ((nodePt.getType() == HydrologyNode.NODE_TYPE_CONFLUENCE) 
 			|| (nodePt.getType() == HydrologyNode.NODE_TYPE_XCONFLUENCE)) {
-			// Then we have started a new reach so recurse on the
-			// reach to find its first FLOW gage...
+			// Then we have started a new reach so recurse on the reach to find its first FLOW gage...
 			if (Message.isDebugOn) {
 				Message.printDebug(dl, routine,
-					"Found a confluence upstream of \""
-					+ nodePt.getDownstreamNode().getCommonID()
+					"Found a confluence upstream of \"" + nodePt.getDownstreamNode().getCommonID()
 					+ "\".  Recursing to find FLOW gage on trib");
 			}
 			upstreamFlowNodes = findUpstreamFlowNodes( upstreamFlowNodes, nodePt, upstreamFlowNodeI, true);
@@ -3279,8 +3253,7 @@ public List findUpstreamFlowNodes(List upstreamFlowNodes,
 			// We are in a reach.  If this is a flow node, then
 			// update the list and return since we are done with the reach(tributary)...
 			if (Message.isDebugOn) {
-				Message.printDebug(dl, routine,
-					"Found upstream tributary gage \"" + nodePt.getCommonID() + "\"");
+				Message.printDebug(dl, routine, "Found upstream tributary gage \"" + nodePt.getCommonID() + "\"");
 			}
 			upstreamFlowNodes.add(nodePt);
 			return upstreamFlowNodes;
@@ -3289,8 +3262,7 @@ public List findUpstreamFlowNodes(List upstreamFlowNodes,
 		if (nodePt == nodeReachTop) {
 			// Went to the top of the reach and did not find an upstream node(zero upstream nodes).
 			if (Message.isDebugOn) {
-				Message.printDebug(dl, routine,
-					"At top of reach.  No upstream FLOW node in trib for \""
+				Message.printDebug(dl, routine, "At top of reach.  No upstream FLOW node in trib for \""
 					+ nodePt.getCommonID() + "\"");
 			}
 			return upstreamFlowNodes;
@@ -3301,22 +3273,17 @@ public List findUpstreamFlowNodes(List upstreamFlowNodes,
 		// will put us at the next node on this trib.
 		//
 		// We put this check here so that if we come back from a
-		// recurse and we are at the top of the reach we do not
-		// overstep the reach.
+		// recurse and we are at the top of the reach we do not overstep the reach.
 		if (didRecurse) {
 			nodePt = getUpstreamNode(getUpstreamNode(nodePt, POSITION_COMPUTATIONAL), POSITION_ABSOLUTE);
 			if (Message.isDebugOn) {
-				Message.printDebug(dl, routine,
-					"Set current node to \""
-					+ nodePt.getCommonID()
-					+ "\" to get to next node on previous "
-					+ "reach in next loop");
+				Message.printDebug(dl, routine, "Set current node to \"" + nodePt.getCommonID()
+					+ "\" to get to next node on previous reach in next loop");
 			}
 		}
 	}
 	return upstreamFlowNodes;
 }
-
 
 /**
 Format the WDID, accounting for padded zeros, etc., for StateMod files.
@@ -3408,8 +3375,8 @@ public List<HydrologyNodeNetworkLabel> getLabelList() {
 Returns a list of all the nodes in the network that are natural flow nodes.
 @return a list of all the nodes that are natural flow nodes.  The kust is guaranteed to be non-null.
 */
-public List getBaseflowNodes() {
-	List v = new Vector();
+public List<HydrologyNode> getBaseflowNodes() {
+	List<HydrologyNode> v = new Vector();
 
 	HydrologyNode node = getMostUpstreamNode();
 	// TODO -- eliminate the need for hold nodes -- they signify an error in the network.
@@ -3460,10 +3427,8 @@ public static HydrologyNode getDownstreamNode(HydrologyNode node, int flag) {
 
 	if (node.getDownstreamNode() == null) {
 		if (Message.isDebugOn) {
-			Message.printDebug(dl, routine,
-				"Found absolute downstream node \""
-				+ nodePt.getNetID()
-			 	+ "\" (\"" + nodePt.getCommonID() + "\")");
+			Message.printDebug(dl, routine, "Found absolute downstream node \""
+				+ nodePt.getNetID() + "\" (\"" + nodePt.getCommonID() + "\")");
 		}
 		return node;
 	}
@@ -3472,49 +3437,38 @@ public static HydrologyNode getDownstreamNode(HydrologyNode node, int flag) {
 		// Just return the downstream node...
 		if (node.getDownstreamNode() == null) {
 			if (Message.isDebugOn) {
-				Message.printDebug(dl, routine,
-					"Node \"" + node.getCommonID()
+				Message.printDebug(dl, routine, "Node \"" + node.getCommonID()
 					+ "\" has downstream node NULL");
 			}
 		}
 		else {	
 			if (Message.isDebugOn) {
-				Message.printDebug(dl, routine,
-					"Node \"" + node.getCommonID()
-					+ "\" has downstream node \""
-					+ (node.getDownstreamNode())
-					.getCommonID() +"\"");
+				Message.printDebug(dl, routine, "Node \"" + node.getCommonID() + "\" has downstream node \""
+					+ (node.getDownstreamNode()).getCommonID() +"\"");
 			}
 		}
 		return node.getDownstreamNode();
 	}
 	else if (flag == POSITION_ABSOLUTE) {
-		// It is expected that if you call this you are starting from
-		// somewhere on a main stem.
+		// It is expected that if you call this you are starting from somewhere on a main stem.
 		if (Message.isDebugOn) {
 			Message.printDebug(dl, routine,
-				"Trying to find absolute downstream starting "
-				+ "with \"" + node.getCommonID() + "\"");
+				"Trying to find absolute downstream starting with \"" + node.getCommonID() + "\"");
 		}
 		// Think of the traversal as a "left-hand" traversal.  Always
 		// follow the first branch added since it is the most downstream
-		// computation-wise.  When we have no more downstream nodes we
-		// are at the bottom...
+		// computation-wise.  When we have no more downstream nodes we are at the bottom...
 		nodePt = node;
 		if (nodePt.getDownstreamNode() == null) {
 			// Nothing below this node...
 			if (Message.isDebugOn) {
-				Message.printDebug(dl, routine,
-					"Found absolute downstream: \""
-					+ nodePt.getCommonID() + "\"");
+				Message.printDebug(dl, routine, "Found absolute downstream: \"" + nodePt.getCommonID() + "\"");
 			}
 			return nodePt;
 		}
 		else {	
-			// Follow the first reach entered for this node
-			// (the most downstream)...
-			return getDownstreamNode(nodePt.getDownstreamNode(),
-				POSITION_ABSOLUTE);
+			// Follow the first reach entered for this node (the most downstream)...
+			return getDownstreamNode(nodePt.getDownstreamNode(), POSITION_ABSOLUTE);
 		}
 	}
 	else if (flag == POSITION_COMPUTATIONAL) {
@@ -3523,33 +3477,22 @@ public static HydrologyNode getDownstreamNode(HydrologyNode node, int flag) {
 		// convergence point is traversed.  The computational order is
 		// basically decided by the user.
 		if (Message.isDebugOn) {
-			Message.printDebug(dl, routine,
-				"Trying to find next computational downstream "
-				+ "node for \"" + node.getCommonID() 
-				+ "\" reachnum=" + node.getTributaryNumber());
+			Message.printDebug(dl, routine, "Trying to find next computational downstream "
+				+ "node for \"" + node.getCommonID() + "\" reachnum=" + node.getTributaryNumber());
 		}
 		if (Message.isDebugOn) {
-			Message.printDebug(dl, routine,
-				"Downstream node \""
-				+ (node.getDownstreamNode()).getCommonID()
-				+ "\" has nupstream = "
-				+ (node.getDownstreamNode())
-				.getNumUpstreamNodes());
+			Message.printDebug(dl, routine, "Downstream node \"" + (node.getDownstreamNode()).getCommonID()
+				+ "\" has nupstream = " + (node.getDownstreamNode()).getNumUpstreamNodes());
 		}
 		if (node.getUpstreamOrder()== HydrologyNode.TRIBS_ADDED_FIRST) {
 			// Makenet convention...
-			if (((node.getDownstreamNode()).getNumUpstreamNodes() 
-				== 1) 
+			if (((node.getDownstreamNode()).getNumUpstreamNodes() == 1) 
 				|| (node.getTributaryNumber() == 1)) {
 				// Then there is only one downstream node or we
-				// are the furthest downstream node in a list of
-				// upstream reaches...
+				// are the furthest downstream node in a list of upstream reaches...
 				if (Message.isDebugOn) {
-					Message.printDebug(dl, routine,
-						"Going to only possible "
-						+ "downstream node:  \""
-						+ (node.getDownstreamNode())
-						.getCommonID() + "\"");
+					Message.printDebug(dl, routine, "Going to only possible downstream node:  \""
+						+ (node.getDownstreamNode()).getCommonID() + "\"");
 				}
 				return node.getDownstreamNode();
 			}
@@ -3558,69 +3501,38 @@ public static HydrologyNode getDownstreamNode(HydrologyNode node, int flag) {
 				// nodes and we are one of them.  Go to the next
 				// lowest reach number and travel to the top of
 				// that reach and use that node for the next
-				// downstream node.  This is a computation
-				// order.
+				// downstream node.  This is a computation order.
 				HydrologyNode nodeDown = node.getDownstreamNode();
 				if (Message.isDebugOn) {
-					Message.printDebug(dl, routine,
-						"Going to highest node on next "
-						+ "downstream branch starting "
-						+ "at \""
-						+ (nodeDown.getUpstreamNode(
-						node.getTributaryNumber() 
-						- 1 - 1)).getCommonID() + "\"");
+					Message.printDebug(dl, routine, "Going to highest node on next "
+						+ "downstream branch starting at \""
+						+ (nodeDown.getUpstreamNode(node.getTributaryNumber() - 1 - 1)).getCommonID() + "\"");
 				}
 				
-				return	getUpstreamNode(
-					nodeDown.getUpstreamNode(
-					node.getTributaryNumber() - 1 - 1),
-					POSITION_ABSOLUTE);
+				return getUpstreamNode(
+					nodeDown.getUpstreamNode( node.getTributaryNumber() - 1 - 1), POSITION_ABSOLUTE);
 			}
 		}
 		else {	
 			// Admin tool convention...
 			// Check to see if we are the furthest downstream by
-			// having a trib number that is the count of upstream
-			// nodes...
-			if (((node.getDownstreamNode()).getNumUpstreamNodes() 
-				== 1) 
-				|| (node.getTributaryNumber() 
-				== node.getDownstreamNode()
-				.getNumUpstreamNodes())) {
+			// having a trib number that is the count of upstream nodes...
+			if (((node.getDownstreamNode()).getNumUpstreamNodes() == 1) 
+				|| (node.getTributaryNumber() == node.getDownstreamNode().getNumUpstreamNodes())) {
 				// Then there is only one downstream node or we
-				// are the furthest downstream node in a list of
-				// upstream reaches...
-				if (node.getDownstreamNode()
-					.getNumUpstreamNodes() == 1) {
+				// are the furthest downstream node in a list of upstream reaches...
+				if (node.getDownstreamNode().getNumUpstreamNodes() == 1) {
 					if (Message.isDebugOn) {
-						Message.printDebug(dl,
-							routine,
-							"Going to only possible"
-							+ " downstream node "
-							+ "because no branch:  "
-							+ "\""
-							+ (node
-							.getDownstreamNode())
-							.getCommonID()
-							+ "\"");
+						Message.printDebug(dl, routine,
+							"Going to only possible downstream node because no branch: \""
+							+ (node.getDownstreamNode()).getCommonID() + "\"");
 					}
 				}
 				else {	
 					if (Message.isDebugOn) {
-						Message.printDebug(dl,
-							routine,
-							"Going to only possible"
-							+ " downstream node:  "
-							+ "\""
-							+ (node
-							.getDownstreamNode())
-							.getCommonID()
-							+ "\" because trib "
-							+ node
-							.getTributaryNumber()
-							+ " is max for "
-							+ "downstream branching"
-							+ " node");
+						Message.printDebug(dl, routine, "Going to only possible downstream node:  \""
+							+ (node.getDownstreamNode()).getCommonID() + "\" because trib "
+							+ node.getTributaryNumber() + " is max for downstream branching node");
 					}
 				}
 				return node.getDownstreamNode();
@@ -3630,23 +3542,16 @@ public static HydrologyNode getDownstreamNode(HydrologyNode node, int flag) {
 				// nodes and we are one of them.  Go to the next
 				// highest reach number and travel to the top of
 				// that reach and use that node for the next
-				// downstream node.  This is a computation
-				// order.
+				// downstream node.  This is a computation order.
 				HydrologyNode nodeDown = node.getDownstreamNode();
 				if (Message.isDebugOn) {
-					Message.printDebug(dl, routine,
-						"Going to highest node on next "
-						+ "downstream branch starting "
-						+ "at \""
-						+ (nodeDown.getUpstreamNode(
-						node.getTributaryNumber() 
-						+ 1 - 1)).getCommonID() + "\"");
+					Message.printDebug(dl, routine, "Going to highest node on next "
+						+ "downstream branch starting at \""
+						+ (nodeDown.getUpstreamNode(node.getTributaryNumber() + 1 - 1)).getCommonID() + "\"");
 				}
 				
-				return	getUpstreamNode(
-					nodeDown.getUpstreamNode(
-					node.getTributaryNumber() + 1 - 1),
-					POSITION_ABSOLUTE);
+				return getUpstreamNode(
+					nodeDown.getUpstreamNode( node.getTributaryNumber() + 1 - 1), POSITION_ABSOLUTE);
 			}
 		}
 	}
@@ -3654,8 +3559,7 @@ public static HydrologyNode getDownstreamNode(HydrologyNode node, int flag) {
 		// Find the most downstream node in the reach.  This does NOT
 		// include the node on the previous stem, but the first node
 		// of the stem in the reach.  Find the node in the current
-		// reach with node_in_reach = 1.  This is the node off of the
-		// parent river node.
+		// reach with node_in_reach = 1.  This is the node off of the parent river node.
 		if (Message.isDebugOn) {
 			Message.printDebug(dl, routine,
 				"Trying to find downstream node in reach tarting at \"" + node.getCommonID() + "\"");
@@ -3664,8 +3568,7 @@ public static HydrologyNode getDownstreamNode(HydrologyNode node, int flag) {
 		while (true) {
 			if (nodePt.getNodeInReachNumber() == 1) {
 				if (Message.isDebugOn) {
-					Message.printDebug(dl, routine,
-						"First node in reach is \""	+ nodePt.getCommonID() + "\"");
+					Message.printDebug(dl, routine, "First node in reach is \"" + nodePt.getCommonID() + "\"");
 				}
 				return nodePt;
 			}
@@ -3673,12 +3576,8 @@ public static HydrologyNode getDownstreamNode(HydrologyNode node, int flag) {
 				// Reset to the next downstream node...
 				nodePt = nodePt.getDownstreamNode();
 				if (Message.isDebugOn) {
-					Message.printDebug(dl, routine,
-						"Going to downstream node \""
-						+ nodePt.getCommonID()
-						+ "\" [node_in_reach = "
-						+ nodePt.getNodeInReachNumber() 
-						+ "]");
+					Message.printDebug(dl, routine, "Going to downstream node \"" + nodePt.getCommonID() +
+						"\" [node_in_reach = " + nodePt.getNodeInReachNumber() + "]");
 				}
 			}
 		}
@@ -3780,8 +3679,8 @@ Returns a list of String, each of which is a line telling how many of
 a certain kind of node is present in the network.  
 @return a List of Strings, guaranteed to be non-null.
 */
-public List getNodeCountsVector() {
-	List v = new Vector();
+public List<String> getNodeCountsVector() {
+	List<String> v = new Vector();
 	int total = 12;
 	int[] types = new int[total];
 	types[0] = HydrologyNode.NODE_TYPE_BASEFLOW;
@@ -3820,7 +3719,7 @@ public HydrologyNode getNodeHead() {
 }
 
 /**
-Return a Vector of all identifiers in the network given the types
+Return a list of all identifiers in the network given the types
 of interest.  The common identifiers are returned or, if the identifier contains
 a ".", the part before the "." is returned.  It is expected that this method
 is only called with real node types(not BLANK, etc.).
@@ -3830,83 +3729,84 @@ code that uses this list should also go upstream to downstream for fastest perfo
 @return a Vector of all identifiers in the network given the types of interest.
 @exception Exception if there is an error during the search.
 */
-public List getNodeIdentifiersByType(int[] nodeTypes)
+public List<String> getNodeIdentifiersByType(int[] nodeTypes)
 throws Exception {
 	String routine = "HydroBase_NodeNetwork.getNodeIdentifiersByType";
-	List ids = new Vector();
+	List<String> ids = new Vector();
 
-	try {	// Main try for method
+	try {
+		// Main try for method
 
-	if (nodeTypes == null) {
-		return ids;
-	}
-
-	boolean nodeTypeMatches = false;
-	HydrologyNode nodePt = null;
-	int j;
-	int nodeType = 0;
-	int nnodeTypes = nodeTypes.length;
-	String commonID = null;
-	List<String> v = null;
-
-	// Traverse from upstream to downstream...
-	for (nodePt = getUpstreamNode(getDownstreamNode(__nodeHead, POSITION_ABSOLUTE), POSITION_ABSOLUTE);
-		nodePt != null;
-		nodePt = getDownstreamNode(nodePt, POSITION_COMPUTATIONAL)) {
-		nodeType = nodePt.getType();
-		// See if the nodeType matches one that we are interested in...
-		nodeTypeMatches = false;
-		for (j = 0; j < nnodeTypes; j++) {
-			if (nodeTypes[j] == nodeType) {
-				nodeTypeMatches = true;
-				break;
-			}
+		if (nodeTypes == null) {
+			return ids;
 		}
-		if (!nodeTypeMatches) {
-			// No need to check further...
+	
+		boolean nodeTypeMatches = false;
+		HydrologyNode nodePt = null;
+		int j;
+		int nodeType = 0;
+		int nnodeTypes = nodeTypes.length;
+		String commonID = null;
+		List<String> v = null;
+	
+		// Traverse from upstream to downstream...
+		for (nodePt = getUpstreamNode(getDownstreamNode(__nodeHead, POSITION_ABSOLUTE), POSITION_ABSOLUTE);
+			nodePt != null;
+			nodePt = getDownstreamNode(nodePt, POSITION_COMPUTATIONAL)) {
+			nodeType = nodePt.getType();
+			// See if the nodeType matches one that we are interested in...
+			nodeTypeMatches = false;
+			for (j = 0; j < nnodeTypes; j++) {
+				if (nodeTypes[j] == nodeType) {
+					nodeTypeMatches = true;
+					break;
+				}
+			}
+			if (!nodeTypeMatches) {
+				// No need to check further...
+				if (nodePt.getDownstreamNode() == null) {
+					// End...
+					break;
+				}
+				continue;
+			}
+			// Use the node type of the HydroBase_Node to make decisions about extra checks, etc...
+			if (nodeType == HydrologyNode.NODE_TYPE_FLOW) {
+				// Just use the common identifier...
+				ids.add(nodePt.getCommonID());
+			}
+			else if ((nodeType == HydrologyNode.NODE_TYPE_DIV) 
+				|| (nodeType == HydrologyNode.NODE_TYPE_DIV_AND_WELL)
+				|| (nodeType == HydrologyNode.NODE_TYPE_ISF)
+				|| (nodeType == HydrologyNode.NODE_TYPE_RES)
+				|| (nodeType == HydrologyNode.NODE_TYPE_WELL)
+				|| (nodeType == HydrologyNode.NODE_TYPE_IMPORT)) {
+				commonID = nodePt.getCommonID();
+				if (commonID.indexOf('.') >= 0) {
+					// Get the string before the "." in case some
+					// ISF or other modified identifier is used...
+					v = StringUtil.breakStringList(commonID, ".", 0);
+					ids.add(v.get(0));
+					// Note that if the _Dwn convention is used,
+					// then the structure should be found when the
+					// upstream terminus is queried and the
+					// information can be reused for the downstream.
+				}
+				else {	
+					// Just add id as is...
+					ids.add(nodePt.getCommonID());
+				}
+			}
+			else {	
+				// Just use the common identifier...
+				ids.add(nodePt.getCommonID());
+			}
 			if (nodePt.getDownstreamNode() == null) {
 				// End...
 				break;
 			}
-			continue;
-		}
-		// Use the node type of the HydroBase_Node to make decisions about extra checks, etc...
-		if (nodeType == HydrologyNode.NODE_TYPE_FLOW) {
-			// Just use the common identifier...
-			ids.add(nodePt.getCommonID());
-		}
-		else if ((nodeType == HydrologyNode.NODE_TYPE_DIV) 
-			|| (nodeType == HydrologyNode.NODE_TYPE_DIV_AND_WELL)
-			|| (nodeType == HydrologyNode.NODE_TYPE_ISF)
-			|| (nodeType == HydrologyNode.NODE_TYPE_RES)
-			|| (nodeType == HydrologyNode.NODE_TYPE_WELL)
-			|| (nodeType == HydrologyNode.NODE_TYPE_IMPORT)) {
-			commonID = nodePt.getCommonID();
-			if (commonID.indexOf('.') >= 0) {
-				// Get the string before the "." in case some
-				// ISF or other modified identifier is used...
-				v = StringUtil.breakStringList(commonID, ".", 0);
-				ids.add(v.get(0));
-				// Note that if the _Dwn convention is used,
-				// then the structure should be found when the
-				// upstream terminus is queried and the
-				// information can be reused for the downstream.
-			}
-			else {	
-				// Just add id as is...
-				ids.add(nodePt.getCommonID());
-			}
-		}
-		else {	
-			// Just use the common identifier...
-			ids.add(nodePt.getCommonID());
-		}
-		if (nodePt.getDownstreamNode() == null) {
-			// End...
-			break;
 		}
 	}
-	} // Main try
 	catch (Exception e) {
 		String message = "Error getting node identifiers for network";
 		Message.printWarning(2, routine, message);
@@ -4398,8 +4298,8 @@ POSITION_ABSOLUTE, POSITION_COMPUTATIONAL.
 @return the upstream node from the specified node.
 */
 public static HydrologyNode getUpstreamNode(HydrologyNode node, int flag) {
-	HydrologyNode	nodePt;
-	String	routine = "HydroBase_NodeNetwork.getUpstreamNode";
+	HydrologyNode nodePt;
+	String routine = "HydroBase_NodeNetwork.getUpstreamNode";
 	int	dl = 15, i;
 
 	if (flag == POSITION_ABSOLUTE) {
@@ -4501,15 +4401,12 @@ public static HydrologyNode getUpstreamNode(HydrologyNode node, int flag) {
 	else if (flag == POSITION_REACH_NEXT) {
 		// Get the next upstream node on the same reach.  This will be
 		// a node with the same reach counter.
+		// FIXME SAM 2011-01-05 never gets beyond i=0 due to checks.
 		for (i = 0; i < node.getNumUpstreamNodes(); i++) {
 			nodePt = node.getUpstreamNode(i);
 			if (nodePt == null) {
-				// Should not happen if the number of nodes
-				// came back OK...
-				Message.printWarning(1, routine,
-					"Null upstream node for \"" 
-					+ node.toString()
-					+ "\" should not be");
+				// Should not happen if the number of nodes came back OK...
+				Message.printWarning(3, routine, "Null upstream node for \"" + node + "\" should not be");
 				return null;
 			}
 			// Return the node that matches the same reach counter
@@ -4646,10 +4543,8 @@ public void insertDownstreamNode(HydrologyNode upstreamNode, HydrologyNode downs
 	// Else we should be able to insert the node...
 
 	if (Message.isDebugOn) {
-		Message.printDebug(10, routine,
-			"Adding \"" + downstreamNode.getCommonID()
-			+ "\" downstream of \"" + upstreamNode.getCommonID() 
-			+ "\"");
+		Message.printDebug(10, routine, "Adding \"" + downstreamNode.getCommonID()
+			+ "\" downstream of \"" + upstreamNode.getCommonID() + "\"");
 	}
 	upstreamNode.addDownstreamNode(downstreamNode);
 } 
@@ -4914,7 +4809,7 @@ Print a node in the .ord file format.
 @return true if successful, false if not
 */
 public boolean printOrdNode(int nodeCount, PrintWriter orderfp, HydrologyNode node) {
-	String	node_downstream_commonID,
+	String node_downstream_commonID,
 		node_downstream_rivernodeid,
 		stype;
 
@@ -4925,8 +4820,7 @@ public boolean printOrdNode(int nodeCount, PrintWriter orderfp, HydrologyNode no
 	stype = HydrologyNode.getTypeString(node.getType(), 1);
 
 	if (node.getDownstreamNode() == null) {
-		// We are at the bottom of the system.  Need to set some
-		// fields to empty strings...
+		// We are at the bottom of the system.  Need to set some fields to empty strings...
 		node_downstream_commonID = new String("");
 		node_downstream_rivernodeid = new String("");
 	}
@@ -4937,32 +4831,19 @@ public boolean printOrdNode(int nodeCount, PrintWriter orderfp, HydrologyNode no
 	}
 	//try {
 		orderfp.println(
-		StringUtil.formatString(nodeCount, "%-4d") 
-		+ " " +
-		StringUtil.formatString(node.getReachLevel(), "%-3d") 
-		+ " " +
-		StringUtil.formatString(node.getReachCounter(), "%-4d") 
-		+ " " +
-		StringUtil.formatString(stype, "%-3.3s") 
-		+ " = " +
-		StringUtil.formatString(node.getCommonID(), "%-12.12s") 
-		+ " = " +
-		StringUtil.formatString(node.getRiverNodeID(), "%-12.12s") 
-		+ " = " +
-		StringUtil.formatString(node.getDescription(), "%-24.24s") 
-		+ " = " +
-		StringUtil.formatString(node.getAreaString(), "%-8.8s") 
-		+ "*" +
-		StringUtil.formatString(node.getPrecipString(), "%-6.6s") 
-		+ "=" +
-		StringUtil.formatString(node.getWaterString(), "%-12.12s") 
-		+ " --> " +
-		StringUtil.formatString(node_downstream_commonID, "%-12.12s") 
-		+ " = " +
-		StringUtil.formatString(node_downstream_rivernodeid, "%-12.12s")
-		+ " " +
-		StringUtil.formatString(node.getX(), "%14.6f") 
-		+ " " +
+		StringUtil.formatString(nodeCount, "%-4d") + " " +
+		StringUtil.formatString(node.getReachLevel(), "%-3d") + " " +
+		StringUtil.formatString(node.getReachCounter(), "%-4d") + " " +
+		StringUtil.formatString(stype, "%-3.3s") + " = " +
+		StringUtil.formatString(node.getCommonID(), "%-12.12s") + " = " +
+		StringUtil.formatString(node.getRiverNodeID(), "%-12.12s") + " = " +
+		StringUtil.formatString(node.getDescription(), "%-24.24s") + " = " +
+		StringUtil.formatString(node.getAreaString(), "%-8.8s") + "*" +
+		StringUtil.formatString(node.getPrecipString(), "%-6.6s") + "=" +
+		StringUtil.formatString(node.getWaterString(), "%-12.12s") + " --> " +
+		StringUtil.formatString(node_downstream_commonID, "%-12.12s") + " = " +
+		StringUtil.formatString(node_downstream_rivernodeid, "%-12.12s") + " " +
+		StringUtil.formatString(node.getX(), "%14.6f") + " " +
 		StringUtil.formatString(node.getY(), "%14.6f"));
 		//+ StringUtil.formatString(node.getNumUpstreamNodes(), "%3d"));
 	//}
@@ -4975,8 +4856,7 @@ public boolean printOrdNode(int nodeCount, PrintWriter orderfp, HydrologyNode no
 }
 
 /**
-Call the IOUtil.printCreatorHeader() method and then append comments indicating
-the database version.
+Call the IOUtil.printCreatorHeader() method and then append comments indicating the database version.
 @param dmi HydroBaseDMI instance.
 @param fp PrintWriter to receive output.
 @param comment Comment character for header.
@@ -5375,41 +5255,70 @@ public boolean treatDryNodesAsNaturalFlow(boolean treatDryAsNaturalFlow) {
 }
 
 /**
-Writes a Vector of HydroBase_Node Objects to a list file.
+Writes a list of Hydrology_Node Objects to a list file.
 @param filename the name of the file to write.
-@param delimiter the delimiter to use for separating fields.
+@param delimiter the delimiter to use for separating fields (use comma if null).
 @param update if true, an existing file will be updated and its header 
 maintained.  Otherwise the file will be overwritten.
-@param nodes Vector of HydroBase_Node to write.
-@param comments Comment strings to add to the header (null or zero length if no
-comments should be added).
+@param nodes list of HydroBase_Node to write.
+@param comments Comment strings to add to the header (null or zero length if no comments should be added).
+@param verbose if true, write out columns for all node data; if false, only write the node ID and name
 @throws Exception if an error occurs.
 */
-public static void writeListFile (	String filename, String delimiter, 
-					boolean update, List nodes,
-					String [] comments )
+public static void writeListFile ( String filename, String delimiter, boolean update,
+	List<HydrologyNode> nodes, String [] comments, boolean verbose )
 throws Exception
 {	int size = 0;
 	if (nodes != null) {
 		size = nodes.size();
 	}
+	if ( delimiter == null ) {
+		delimiter = ",";
+	}
 	
-	int fieldCount = 2;
-	String[] names = { 
+	String[] namesShort = { 
 		"ID", 
 		"Name" 
 	};
-	String[] formats = {
+	String[] formatsShort = {
 		"%-20.20s",
 		"%-80.80s"
 	};
+	String[] names = namesShort;
+	String[] formats = formatsShort;
+	if ( verbose ) {
+		String[] namesVerbose = { 
+			"ID", 
+			"Name",
+			"Type",
+			"X",
+			"Y",
+			"DownstreamCommonID",
+			"UpstreamCommonID",
+			"DownstreamID",
+			"UpstreamID"			
+		};
+		String[] formatsVerbose = {
+			"%-20.20s",
+			"%-80.80s",
+			"%s",
+			"%.6f",
+			"%.6f",
+			"%s",
+			"%s",
+			"%s",
+			"%s"
+		};
+		names = namesVerbose;
+		formats = formatsVerbose;
+	}
+	int fieldCount = names.length;
 	
 	String oldFile = null;	
 	if (update) {
 		oldFile = IOUtil.getPathUsingWorkingDir(filename);
 	}
 	
-	HydrologyNode node = null;
 	int j = 0;
 	PrintWriter out = null;
 	String[] commentString = { "#" };
@@ -5423,20 +5332,82 @@ throws Exception
 			IOUtil.getPathUsingWorkingDir(filename), 
 			comments, commentString, ignoreCommentString, 0);
 
-		for (int i = 0; i < fieldCount; i++) {
-			buffer.append("\"" + names[i] + "\"");
-			if (i < (fieldCount - 1)) {
+		for (int iField = 0; iField < fieldCount; iField++) {
+			buffer.append("\"" + names[iField] + "\"");
+			if (iField < (fieldCount - 1)) {
 				buffer.append(delimiter);
 			}
 		}
 
 		out.println(buffer.toString());
 		
-		for (int i = 0; i < size; i++) {
-			node = (HydrologyNode)nodes.get(i);
+		HydrologyNode downstreamNode;
+		List<HydrologyNode> upstreamNodes;
+		String s;
+		StringBuffer b = new StringBuffer();
+		String [] upstreamIDs;
+		int iField;
+		for ( HydrologyNode node: nodes ) {
+			iField = 0;
 			
-			line[0] = StringUtil.formatString(node.getCommonID(), formats[0]).trim();
-			line[1] = StringUtil.formatString(node.getDescription(), formats[1]).trim();
+			line[iField] = StringUtil.formatString(node.getCommonID(), formats[iField]).trim();
+			++iField;
+			line[iField] = StringUtil.formatString(node.getDescription(), formats[iField]).trim();
+			++iField;
+			if ( verbose ) {
+				// Get more information
+				line[iField] = StringUtil.formatString(HydrologyNode.getVerboseType(node.getType()), formats[iField]).trim();
+				++iField;
+				line[iField] = StringUtil.formatString(node.getX(), formats[iField]).trim();
+				++iField;
+				line[iField] = StringUtil.formatString(node.getY(), formats[iField]).trim();
+				++iField;
+				// Downstream common ID
+				downstreamNode = node.getDownstreamNode();
+				s = "";
+				if ( downstreamNode != null ) {
+					s = downstreamNode.getCommonID();
+				}
+				line[iField] = StringUtil.formatString(s, formats[iField]).trim();
+				++iField;
+				// Upstream common ID
+				upstreamNodes = node.getUpstreamNodes();
+				b.setLength(0);
+				if ( upstreamNodes != null ) {
+					for ( HydrologyNode node2: upstreamNodes ) {
+						if ( node2 != null ) {
+							if ( b.length() > 0 ) {
+								b.append(",");
+							}
+							b.append(node2.getCommonID());
+						}
+					}
+				}
+				line[iField] = StringUtil.formatString(b.toString(), formats[iField]).trim();
+				++iField;
+				// Downstream ID
+				s = node.getDownstreamNodeID();
+				if ( s == null ) {
+					s = "";
+				}
+				line[iField] = StringUtil.formatString(s, formats[iField]).trim();
+				++iField;
+				// Upstream IDs
+				b.setLength(0);
+				upstreamIDs = node.getUpstreamNodeIDs();
+				if ( upstreamIDs != null ) {
+					for ( int k = 0; k < upstreamIDs.length; k++ ) {
+						if ( upstreamIDs[k] != null ) {
+							if ( b.length() > 0 ) {
+								b.append(",");
+							}
+							b.append(upstreamIDs[k]);
+						}
+					}
+				}
+				line[iField] = StringUtil.formatString(b.toString(), formats[iField]).trim();
+				++iField;
+			}
 
 			buffer = new StringBuffer();	
 			for (j = 0; j < fieldCount; j++) {
@@ -5451,17 +5422,12 @@ throws Exception
 
 			out.println(buffer.toString());
 		}
-		out.flush();
-		out.close();
-		out = null;
 	}
-	catch (Exception e) {
+	finally {
 		if (out != null) {
 			out.flush();
 			out.close();
 		}
-		out = null;
-		throw e;
 	}
 }
 
@@ -5481,7 +5447,8 @@ throws Exception
 	// page layout.
 	// What could be done is to get the extent from the data (including legend and annotations?) and
 	// then center on the page limits with some buffer around the edge nodes to allow for labels, and growth.
-	writeXML(filename, determineExtentFromNetworkData(), getLayoutList(), getAnnotationList(), getLinkList(), getLegendLocation());
+	writeXML(filename, determineExtentFromNetworkData(), getLayoutList(), getAnnotationList(),
+		getLinkList(), getLegendLocation());
 }
 
 /**
@@ -5910,15 +5877,13 @@ format =
 	}
 	else {
 		int size = layouts.size();
-		PropList layout = null;
 		String id = null;
 		String isDefault = null;
 		String paperFormat = null;
 		String orient = null;
 		String sFontSize = null;
 		String sNodeSize = null;
-		for (int i = 0; i < size; i++) {
-			layout = (PropList)layouts.get(i);
+		for ( PropList layout: layouts ) {
 			id = layout.getValue("ID");
 			isDefault = layout.getValue("IsDefault");
 			paperFormat = layout.getValue("PaperSize");

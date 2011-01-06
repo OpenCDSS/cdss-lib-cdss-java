@@ -653,32 +653,28 @@ public boolean addUpstreamNode(HydrologyNode upstream_node) {
 
 	// Add the node to the vector...
 	try {
-
-	if (Message.isDebugOn) {
-		Message.printDebug(dl, routine,
-			"Adding \"" + upstream_node.getCommonID() + "\" upstream of \"" + getCommonID() + "\"");
-	}
+		if (Message.isDebugOn) {
+			Message.printDebug(dl, routine,
+				"Adding \"" + upstream_node.getCommonID() + "\" upstream of \"" + getCommonID() + "\"");
+		}
+		if (__upstream == null) {
+			// Need to allocate space for it...
+			__upstream = new Vector();
+		}
+		__upstream.add(upstream_node);
 	
-	if (__upstream == null) {
-		// Need to allocate space for it...
-		__upstream = new Vector();
-	}
-
-	__upstream.add(upstream_node);
-
-	// Make so the upstream node has this node as its downstream node...
-	upstream_node.setDownstreamNode(this);
-	if (Message.isDebugOn) {
-		Message.printDebug(dl, routine, "\""
-			+ upstream_node.getCommonID() + "\" downstream is \"" + getCommonID() + "\"");
-	}
-	
-	return true;
-	
+		// Make so the upstream node has this node as its downstream node...
+		upstream_node.setDownstreamNode(this);
+		if (Message.isDebugOn) {
+			Message.printDebug(dl, routine, "\""
+				+ upstream_node.getCommonID() + "\" downstream is \"" + getCommonID() + "\"");
+		}
+		
+		return true;
 	}
 	catch (Exception e) {
-		Message.printWarning(2, routine, "Error adding upstream node.");
-		Message.printWarning(2, routine, e);
+		Message.printWarning(3, routine, "Error adding upstream node.");
+		Message.printWarning(3, routine, e);
 		return false;
 	}
 }
@@ -917,8 +913,11 @@ private void calculateWISBounds(GRJComponentDrawingArea da) {
 /**
 Clears the upstream node ids stored in the __upstreamNodeIDs list.  The list is set to null.
 */
-public void clearUpstreamNodeIDs() {
-	__upstreamNodeIDs = null;
+public void clearUpstreamNodeIDs()
+{
+	if ( __upstreamNodeIDs != null ) {
+		__upstreamNodeIDs.clear();
+	}
 }
 
 /**
@@ -937,23 +936,23 @@ public boolean contains(double x, double y) {
 
 /**
 Break the link with an upstream node.
-@param upstream_node Upstream node to disconnect from the network.
+@param upstreamNode Upstream node to disconnect from the network.
 @return true if successful, false if not.
 */
-public boolean deleteUpstreamNode(HydrologyNode upstream_node) {
+public boolean deleteUpstreamNode(HydrologyNode upstreamNode) {
 	String routine = __CLASS + ".deleteUpstreamNode";
 
 	// Find a matching node.  Just check addresses...
 	try {
 
-	for (int i = 0; i < __upstream.size(); i++) {
-		if (upstream_node.equals( (HydrologyNode)__upstream.get(i))) {
-			// Found a match.  Delete the element...
-			__upstream.remove(i);
-			return true;
+		for (int i = 0; i < __upstream.size(); i++) {
+			if (upstreamNode.equals( __upstream.get(i))) {
+				// Found a match.  Delete the element...
+				__upstream.remove(i);
+				return true;
+			}
 		}
-	}
-	return false;
+		return false;
 
 	}
 	catch (Exception e) {
@@ -1037,8 +1036,7 @@ private void drawNodeForNetwork(GRJComponentDrawingArea da) {
 		String label = null;
 		int labelPos = 0;
 		double labelAngle = 0;
-		if ( (__type == NODE_TYPE_BLANK) ||
-			(__type == NODE_TYPE_CONFLUENCE) ||
+		if ( (__type == NODE_TYPE_BLANK) || (__type == NODE_TYPE_CONFLUENCE) ||
 			(__type == NODE_TYPE_XCONFLUENCE) ) {
 		   	// do nothing
 		}    
@@ -1705,11 +1703,10 @@ public int getType() {
 }
 
 /**
-Returns the elements in the __upstreamNodeIDs Vector as an array of Strings.
-The Vector contains the IDs of all the nodes immediately upstream from this
+Returns the elements in the __upstreamNodeIDs list as an array of Strings.
+The list contains the IDs of all the nodes immediately upstream from this
 node.  This is used by network drawing code.
-@return a String array of all the ids of nodes immediately upstream from this
-node.
+@return a String array of all the ids of nodes immediately upstream from this node.
 */
 public String[] getUpstreamNodeIDs() {
 	int size = 0;
@@ -1718,7 +1715,7 @@ public String[] getUpstreamNodeIDs() {
 	}
 	String[] ids = new String[size];
 	for (int i = 0; i < size; i++) {
-		ids[i] = (String)__upstreamNodeIDs.get(i);
+		ids[i] = __upstreamNodeIDs.get(i);
 	}
 	return ids;
 }
@@ -1726,9 +1723,8 @@ public String[] getUpstreamNodeIDs() {
 /**
 Returns the IDs of all the nodes immediately upstream of this node.  Used by
 drawing code.  This goes to each of the upstream nodes in the __upstream 
-Vector and pulls out their ID to place in the String.
-@return a String array of all the nodes' ids in the order the nodes are found
-in the __upstream Vector.
+list and pulls out their ID to place in the String.
+@return a String array of all the nodes' ids in the order the nodes are found in the __upstream list.
 */
 public String[] getUpstreamNodesIDs() {
 	if (__upstream == null || __upstream.size() == 0) {
@@ -1737,7 +1733,7 @@ public String[] getUpstreamNodesIDs() {
 
 	String[] ids = new String[__upstream.size()];
 	for (int i = 0; i < __upstream.size(); i++) {
-		ids[i] =((HydrologyNode)__upstream.get(i)).getCommonID();
+		ids[i] = __upstream.get(i).getCommonID();
 	}
 	return ids;
 }
@@ -1937,7 +1933,7 @@ public int getUpstreamNodePosition(String commonID) {
 }
 
 /**
-Returns the list of upstream nodes.
+Returns the list of upstream nodes.  The internal list is returned (not a new reference).
 @return the list of upstream nodes.
 */
 public List<HydrologyNode> getUpstreamNodes() {
@@ -2181,6 +2177,7 @@ private void initialize() {
 	__waterString = "";
 	__water = 0.0;
 	__prorationFactor = 0.0;
+	// TODO SAM 2011-01-05 Evaluate whether missing values should be NaN
 	__x = 0.0;
 	__y = 0.0;
 	__labelAngle = 45;
@@ -2429,7 +2426,7 @@ public boolean parseAreaPrecip(String string0) {
 
 /**
 Removes a node from the upstream of this node.  Used by the network drawing code.
-@param pos the position in the __upstream Vector of the node to be removed.
+@param pos the position in the __upstream list of the node to be removed.
 */
 public void removeUpstreamNode(int pos) {	
 	__upstream.remove(pos);
@@ -2438,7 +2435,7 @@ public void removeUpstreamNode(int pos) {
 /**
 Replaces one of this node's upstream nodes with another node.  Used by the network drawing code.
 @param node the node to replace the upstream node with.
-@param pos the position in the __upstream Vector of the node to be replaced.
+@param pos the position in the __upstream list of the node to be replaced.
 */
 public void replaceUpstreamNode(HydrologyNode node, int pos) {
 	__upstream.set(pos,node);
@@ -3418,7 +3415,7 @@ public String writeNodeXML(PrintWriter out, boolean verbose) {
 	String xml = "    <Node ";
 	String n = System.getProperty("line.separator");	
 
-	String id = __commonID;
+	String id = getCommonID();
 	id = StringUtil.replaceString(id, "&", "&amp;");
 	id = StringUtil.replaceString(id, "<", "&lt;");
 	id = StringUtil.replaceString(id, ">", "&gt;");	
