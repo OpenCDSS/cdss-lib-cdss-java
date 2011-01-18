@@ -5818,56 +5818,46 @@ format =
 	// to check in isXML() to tell if the net file is in XML format.
 	out.print("<StateMod_Network " + n);
 
+	// If the limits are all zeros, set the xmax and ymax to 1, just to have something to
+	// visualize and prevent divide by zeros
+	if ( limits != null ) {
+		if ( (limits.getLeftX() == 0.0) && (limits.getRightX() == 0.0) ) {
+			limits.setRightX(1.0);
+		}
+		if ( (limits.getBottomY() == 0.0) && (limits.getTopY() == 0.0) ) {
+			limits.setTopY(1.0);
+		}
+	}
 	if (limits != null && legendLimits == null) {
 		out.print("    XMin = \"" 
-			+ StringUtil.formatString(
-			limits.getLeftX(), "%13.6f").trim()
-			+ "\"" + n);
+			+ StringUtil.formatString(limits.getLeftX(), "%13.6f").trim() + "\"" + n);
 		out.print("    YMin = \"" 
-			+ StringUtil.formatString(
-			limits.getBottomY(), "%13.6f").trim()
-			+ "\"" + n);
+			+ StringUtil.formatString(limits.getBottomY(), "%13.6f").trim() + "\"" + n);
 		out.print("    XMax = \"" 
-			+ StringUtil.formatString(
-			limits.getRightX(), "%13.6f").trim()
-			+ "\"" + n);
+			+ StringUtil.formatString(limits.getRightX(), "%13.6f").trim() + "\"" + n);
 		out.print("    YMax = \"" 
-			+ StringUtil.formatString(
-			limits.getTopY(), "%13.6f").trim()
-			+ "\">" + n);
+			+ StringUtil.formatString(limits.getTopY(), "%13.6f").trim() + "\">" + n);
 	}
 	else if (limits != null && legendLimits != null) {
 		out.print("    XMin = \"" 
-			+ StringUtil.formatString(
-			limits.getLeftX(), "%13.6f").trim()
-			+ "\"" + n);
+			+ StringUtil.formatString(limits.getLeftX(), "%13.6f").trim() + "\"" + n);
 		out.print("    YMin = \"" 
-			+ StringUtil.formatString(
-			limits.getBottomY(), "%13.6f").trim()
-			+ "\"" + n);
+			+ StringUtil.formatString(limits.getBottomY(), "%13.6f").trim() + "\"" + n);
 		out.print("    XMax = \"" 
-			+ StringUtil.formatString(
-			limits.getRightX(), "%13.6f").trim()
-			+ "\"" + n);
+			+ StringUtil.formatString(limits.getRightX(), "%13.6f").trim() + "\"" + n);
 		out.print("    YMax = \"" 
-			+ StringUtil.formatString(
-			limits.getTopY(), "%13.6f").trim()
-			+ "\"" + n);
+			+ StringUtil.formatString(limits.getTopY(), "%13.6f").trim() + "\"" + n);
 		out.print("    LegendX = \"" 
-			+ StringUtil.formatString(
-			legendLimits.getLeftX(), "%13.6f").trim()
-			+ "\"" + n);
+			+ StringUtil.formatString(legendLimits.getLeftX(), "%13.6f").trim()+ "\"" + n);
 		out.print("    LegendY = \"" 
-			+ StringUtil.formatString(
-			legendLimits.getBottomY(), "%13.6f").trim()
-			+ "\">" + n);
+			+ StringUtil.formatString(legendLimits.getBottomY(), "%13.6f").trim()+ "\">" + n);
 	}
 	else {
 		out.print(">");
 	}
 
-	if (layouts == null) { 
-		// default ...
+	if ( (layouts == null) || (layouts.size() == 0) ) { 
+		// Add a default layout...
 		out.print("    <PageLayout ID = \"Page Layout #1\"" + n);
 		out.print("        PaperSize = \"C\"" + n);
 		out.print("        PageOrientation = \"Landscape\"" + n);
@@ -5876,7 +5866,6 @@ format =
 		out.print("        IsDefault = \"True\"/>" + n);
 	}
 	else {
-		int size = layouts.size();
 		String id = null;
 		String isDefault = null;
 		String paperFormat = null;
@@ -5924,11 +5913,11 @@ format =
 	}
 
 	String text = null;
-	if (annotations != null) {
+	if ( (annotations != null) && (annotations.size() > 0)) {
 		int size = annotations.size();
 		PropList p = null;
 		for (int i = 0; i < size; i++) {
-			node = (HydrologyNode)annotations.get(i);
+			node = annotations.get(i);
 			p = (PropList)node.getAssociatedObject();
 			out.print("    <Annotation" + n);
 			out.print("         ShapeType=\"Text\"" + n);
@@ -5948,12 +5937,12 @@ format =
 
 	String link = null;
 
-	if (links != null) {
-	out.print("" + n);
+	if ( (links != null) && (links.size() > 0) ) {
+		out.print("" + n);
 		int size = links.size();
 		PropList p = null;
 		for (int i = 0; i < size; i++) {
-			p = (PropList)links.get(i);
+			p = links.get(i);
 			out.print("    <Link" + n);
 			out.print("         ShapeType=\"Link\"" + n);
 			out.print("         LineStyle=\"Dashed\"" + n);
