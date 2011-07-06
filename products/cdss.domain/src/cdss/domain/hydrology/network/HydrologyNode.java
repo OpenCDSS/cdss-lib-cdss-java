@@ -294,13 +294,13 @@ WIS format row associated with this node.  WIS-specific.
 /**
 The size of the icon in pixels on the screen.
 */
-public static int ICON_DIAM = 20;
+private int __iconDiameter = 20;
 
 /**
-The extra space around the node icon for displaying the extra circle (or square for plans stations)
+The extra space around the node icon for displaying the extra circle (or square for plan stations)
 showing that it is a natural flow node.
 */
-public static int DECORATOR_DIAM = 6;
+private int __decoratorDiameter = 6;
 
 /**
 Computational order of nodes, with 1 being most upstream.  This generally has 
@@ -785,8 +785,8 @@ private void calculateNodeExtentForNetwork(GRJComponentDrawingArea da) {
 	String label = __label;
 
 	if (__symbol != null) {
-		double width = ICON_DIAM;
-		double height = ICON_DIAM;
+		double width = getIconDiameter();
+		double height = getIconDiameter();
 	
 		if (__label != null) {
 			GRLimits limits = GRDrawingAreaUtil.getTextExtents(da, label, GRUnits.DEVICE);
@@ -808,81 +808,82 @@ private void calculateWISBounds(GRJComponentDrawingArea da) {
 	if (__symbol == null) {
 		int style = GRSymbol.TYPE_POLYGON;
 		GRColor black = GRColor.black;
+		int iconDiameter = getIconDiameter();
 
 		// the secondary symbol is used to blank out the area behind the primary symbol's node icon.  
 
 		if (__nodeType.equalsIgnoreCase("Reservoir")) {
 			__symbol = new GRSymbol(GRSymbol.SYM_RTRI,
-				style, black, black, ICON_DIAM*2/3, 
-				ICON_DIAM*2/3);
+				style, black, black, iconDiameter*2/3, 
+				iconDiameter*2/3);
 			__secondarySymbol = new GRSymbol(GRSymbol.SYM_FRTRI,
-				style, black, black, ICON_DIAM*2/3, 
-				ICON_DIAM*2/3);
+				style, black, black, iconDiameter*2/3, 
+				iconDiameter*2/3);
 			__symText = null;
 		}
 		else if (__nodeType.equalsIgnoreCase("Stream")) {
 			__symbol = new GRSymbol(GRSymbol.SYM_CIR,
-				style, black, black, ICON_DIAM*2/3, 
-				ICON_DIAM*2/3);
+				style, black, black, iconDiameter*2/3, 
+				iconDiameter*2/3);
 			__secondarySymbol = new GRSymbol(GRSymbol.SYM_FCIR,
-				style, black, black, ICON_DIAM*2/3, 
-				ICON_DIAM*2/3);
+				style, black, black, iconDiameter*2/3, 
+				iconDiameter*2/3);
 			__symText = "O";
 		}
 		else if (__nodeType.equalsIgnoreCase("Confluence")) {
-			__symbol = new GRSymbol(GRSymbol.SYM_CIR, style, black, black, ICON_DIAM*2/3, ICON_DIAM*2/3);
+			__symbol = new GRSymbol(GRSymbol.SYM_CIR, style, black, black, iconDiameter*2/3, iconDiameter*2/3);
 			__secondarySymbol = new GRSymbol(GRSymbol.SYM_FCIR,
-				style, black, black, ICON_DIAM*2/3, 
-				ICON_DIAM*2/3);
+				style, black, black, iconDiameter*2/3, 
+				iconDiameter*2/3);
 			__symText = "C";
 		}
 		else if (__nodeType.equalsIgnoreCase("Station") || __nodeType.equalsIgnoreCase("Streamflow")) {
 			__symbol = new GRSymbol(GRSymbol.SYM_CIR,
-				style, black, black, ICON_DIAM*2/3, 
-				ICON_DIAM*2/3);
+				style, black, black, iconDiameter*2/3, 
+				iconDiameter*2/3);
 			__secondarySymbol = new GRSymbol(GRSymbol.SYM_FCIR,
-				style, black, black, ICON_DIAM*2/3, 
-				ICON_DIAM*2/3);
+				style, black, black, iconDiameter*2/3, 
+				iconDiameter*2/3);
 			__symText = "B";
 		}
 		else if (__nodeType.equalsIgnoreCase("Diversion")) {
 			__symbol = new GRSymbol(GRSymbol.SYM_CIR,
-				style, black, black, ICON_DIAM*2/3, ICON_DIAM*2/3);
+				style, black, black, iconDiameter*2/3, iconDiameter*2/3);
 			__secondarySymbol = new GRSymbol(GRSymbol.SYM_FCIR,
-				style, black, black, ICON_DIAM*2/3, ICON_DIAM*2/3);
+				style, black, black, iconDiameter*2/3, iconDiameter*2/3);
 			__symText = "D";
 		}
 		else if (__nodeType.equalsIgnoreCase("MinFlow")) {
 			__symbol = new GRSymbol(GRSymbol.SYM_CIR,
-				style, black, black, ICON_DIAM*2/3, 
-				ICON_DIAM*2/3);
+				style, black, black, iconDiameter*2/3, 
+				iconDiameter*2/3);
 			__secondarySymbol = new GRSymbol(GRSymbol.SYM_FCIR,
-				style, black, black, ICON_DIAM*2/3, 
-				ICON_DIAM*2/3);
+				style, black, black, iconDiameter*2/3, 
+				iconDiameter*2/3);
 			__symText = "M";
 		}
 		else if (__nodeType.equalsIgnoreCase("Other")) {
 			__symbol = new GRSymbol(GRSymbol.SYM_CIR,
-				style, black, black, ICON_DIAM*2/3, 
-				ICON_DIAM*2/3);
+				style, black, black, iconDiameter*2/3, 
+				iconDiameter*2/3);
 			__secondarySymbol = new GRSymbol(GRSymbol.SYM_FCIR,
-				style, black, black, ICON_DIAM*2/3, 
-				ICON_DIAM*2/3);
+				style, black, black, iconDiameter*2/3, 
+				iconDiameter*2/3);
 			__symText = "O";
 		}
 		else if (__nodeType.equalsIgnoreCase("Plan")) {
 			__symbol = new GRSymbol(GRSymbol.SYM_CIR,
-				style, black, black, ICON_DIAM*2/3, 
-				ICON_DIAM*2/3);
+				style, black, black, iconDiameter*2/3, 
+				iconDiameter*2/3);
 			__secondarySymbol = new GRSymbol(GRSymbol.SYM_FSQ,
-				style, black, black, ICON_DIAM*2/3, 
-				ICON_DIAM*2/3);
+				style, black, black, iconDiameter*2/3, 
+				iconDiameter*2/3);
 			__symText = "PL";
 		}
 		else if (__nodeType.equalsIgnoreCase("End")) {
 			__symbol = new GRSymbol(GRSymbol.SYM_FCIR,
-				style, black, black, ICON_DIAM*2/3, 
-				ICON_DIAM*2/3);
+				style, black, black, iconDiameter*2/3, 
+				iconDiameter*2/3);
 			__symText = null;
 		}	
 		else {
@@ -904,8 +905,8 @@ private void calculateWISBounds(GRJComponentDrawingArea da) {
 		mod = data.getHeight() / draw.getHeight();
 	}
 
-	__height = ICON_DIAM*2/3 * mod;
-	__width = ICON_DIAM*2/3 * mod;
+	__height = getIconDiameter()*2/3 * mod;
+	__width = getIconDiameter()*2/3 * mod;
 	
 	__boundsCalculated = true;
 }
@@ -1054,7 +1055,7 @@ private void drawNodeForNetwork(GRJComponentDrawingArea da) {
 			label = getNodeLabel( HydrologyNodeNetwork.LABEL_NODES_COMMONID);
 		}
 		else {
-			Message.printWarning(2, routine, "No text specified!");
+			Message.printWarning(3, routine, "No text specified!");
 			label = "";
 		}
 
@@ -1116,7 +1117,7 @@ private void drawNodeForNetwork(GRJComponentDrawingArea da) {
 				da.setFont( oldFont.getName(), Font.BOLD, oldFont.getSize());
 			}
 			GRDrawingAreaUtil.drawSymbolText(da, GRSymbol.SYM_NONE, 
-				__x, __y, symbolSize + DECORATOR_DIAM, label, labelAngle, labelPos, GRUnits.DEVICE, 0);
+				__x, __y, symbolSize + getDecoratorDiameter(), label, labelAngle, labelPos, GRUnits.DEVICE, 0);
 			if ( getIsNaturalFlow() ) {
 				// Set back to old font.
 				da.setFont( oldFont.getName(), oldFont.getStyle(), oldFont.getSize());
@@ -1144,7 +1145,7 @@ private void drawNodeForNetwork(GRJComponentDrawingArea da) {
 			GRDrawingAreaUtil.setColor(da, GRColor.black);
 		}
 	}
-	//Message.printStatus(2, routine, "Drawing symbol " + symbol );
+	//Message.printStatus(2, routine, "Drawing symbol " + symbol + " at " + __x + "," + __y + " size="+ symbolSize );
 	GRDrawingAreaUtil.drawSymbol(da, symbol, __x, __y, symbolSize, GRUnits.DEVICE,0);
 
 	// Draw a larger circle around decorator nodes
@@ -1158,14 +1159,14 @@ private void drawNodeForNetwork(GRJComponentDrawingArea da) {
 	}
 	if ( (__symbol != null) && getIsNaturalFlow()) {
 		GRDrawingAreaUtil.drawSymbol(da, GRSymbol.SYM_CIR,
-			__x, __y, __symbol.getSize() + DECORATOR_DIAM, GRUnits.DEVICE, 0);
+			__x, __y, __symbol.getSize() + getDecoratorDiameter(), GRUnits.DEVICE, 0);
 	}
 	
 	// Draw a larger square around import nodes - same color as above
 	if ( (__symbol != null) && getIsImport() ) {
 		//GRDrawingAreaUtil.drawSymbol(da, GRSymbol.SYM_FARR1,
 		GRDrawingAreaUtil.drawSymbol(da, GRSymbol.SYM_SQ,
-			__x, __y, __symbol.getSize() + DECORATOR_DIAM, GRUnits.DEVICE, 0);
+			__x, __y, __symbol.getSize() + getDecoratorDiameter(), GRUnits.DEVICE, 0);
 	}
 
 	// Draw the secondary symbol, for example the inner X in the end node..
@@ -1388,6 +1389,14 @@ public double getDataDiameter() {
 }
 
 /**
+Returns the decorator diameter.
+@return the decorator diameter.
+*/
+public int getDecoratorDiameter() {
+	return __decoratorDiameter;
+}
+
+/**
 Returns the delivery flow.
 @return the delivery flow.
 */
@@ -1456,6 +1465,14 @@ Returns the height of the drawing area occupied by the node.
 */
 public double getHeight() {
 	return __height;
+}
+
+/**
+Returns the icon diameter.
+@return the icon diameter.
+*/
+public int getIconDiameter() {
+	return __iconDiameter;
 }
 
 /**
@@ -2552,6 +2569,15 @@ public void setDBY(double y) {
 }
 
 /**
+Sets the decorator diameter.  The decorator icon diameter will be computed accordingly.
+@param decoratorDiameter size of the decorator diameter in pixels.  
+*/
+public void setDecoratorDiameter(int decoratorDiameter)
+{
+	__decoratorDiameter = decoratorDiameter;
+}
+
+/**
 Sets the delivery flow.
 @param deliveryFlow value to put in the delivery flow.
 */
@@ -2602,15 +2628,16 @@ public static void setDrawText(boolean drawText) {
 
 /**
 Sets the icon diameter.  The decorator icon diameter will be computed accordingly.
-@param size size of the icon diameter in pixels.  
+@param iconDiameter size of the icon diameter in pixels.  
 */
-public static void setIconDiam(int size) {
-	ICON_DIAM = size;
-	int third = ICON_DIAM / 3;
+public void setIconDiameter(int iconDiameter)
+{
+	__iconDiameter = iconDiameter;
+	int third = __iconDiameter / 3;
 	if ((third % 2) == 1) {
 		third++;
 	}
-	DECORATOR_DIAM = third;
+	setDecoratorDiameter ( third );
 }
 
 /**
@@ -2907,8 +2934,9 @@ Set the node symbol given the node type.
 private void setSymbolFromNodeType ( int nodeType, boolean computeSize )
 {	int symbolStyle = GRSymbol.TYPE_POLYGON;
 	GRColor symbolColor = GRColor.black;
+	int iconDiameter = getIconDiameter();
 	if ( (nodeType == NODE_TYPE_CONFLUENCE) || (nodeType == NODE_TYPE_XCONFLUENCE) ) {
-		__symbol = new GRSymbol(GRSymbol.SYM_FCIR, symbolStyle, symbolColor, symbolColor, ICON_DIAM/2, ICON_DIAM/2);
+		__symbol = new GRSymbol(GRSymbol.SYM_FCIR, symbolStyle, symbolColor, symbolColor, iconDiameter/2, iconDiameter/2);
 		__symText = null;
 		if ( computeSize ) {
 			__width /= 2;
@@ -2916,24 +2944,24 @@ private void setSymbolFromNodeType ( int nodeType, boolean computeSize )
 		}
 	}
 	else if ( nodeType == NODE_TYPE_DIV ) {
-		__symbol = new GRSymbol(GRSymbol.SYM_CIR, symbolStyle, symbolColor, symbolColor, ICON_DIAM, ICON_DIAM);
+		__symbol = new GRSymbol(GRSymbol.SYM_CIR, symbolStyle, symbolColor, symbolColor, iconDiameter, iconDiameter);
 		__symText = "D";
 	}
 	else if ( nodeType == NODE_TYPE_DIV_AND_WELL ) {
-		__symbol = new GRSymbol(GRSymbol.SYM_CIR, symbolStyle, symbolColor, symbolColor, ICON_DIAM, ICON_DIAM);
+		__symbol = new GRSymbol(GRSymbol.SYM_CIR, symbolStyle, symbolColor, symbolColor, iconDiameter, iconDiameter);
 		__symText = "DW";
 	}
 	else if ( nodeType == NODE_TYPE_END ) {
-		__symbol = new GRSymbol (GRSymbol.SYM_EX, symbolStyle, symbolColor, symbolColor, ICON_DIAM, ICON_DIAM);
-		__secondarySymbol = new GRSymbol(GRSymbol.SYM_CIR, symbolStyle, symbolColor, symbolColor, ICON_DIAM, ICON_DIAM);
+		__symbol = new GRSymbol (GRSymbol.SYM_EX, symbolStyle, symbolColor, symbolColor, iconDiameter, iconDiameter);
+		__secondarySymbol = new GRSymbol(GRSymbol.SYM_CIR, symbolStyle, symbolColor, symbolColor, iconDiameter, iconDiameter);
 		__symText = null;
 	}
 	else if ( nodeType == NODE_TYPE_FLOW ) {
-		__symbol = new GRSymbol(GRSymbol.SYM_FCIR, symbolStyle, symbolColor, symbolColor, ICON_DIAM, ICON_DIAM);
+		__symbol = new GRSymbol(GRSymbol.SYM_FCIR, symbolStyle, symbolColor, symbolColor, iconDiameter, iconDiameter);
 		__symText = null;
 	}
 	else if ( nodeType == NODE_TYPE_ISF ) {
-		__symbol = new GRSymbol(GRSymbol.SYM_CIR, symbolStyle, symbolColor, symbolColor, ICON_DIAM, ICON_DIAM);
+		__symbol = new GRSymbol(GRSymbol.SYM_CIR, symbolStyle, symbolColor, symbolColor, iconDiameter, iconDiameter);
 		//__symText = "I";
 		__symText = "M";
 	}
@@ -2942,19 +2970,19 @@ private void setSymbolFromNodeType ( int nodeType, boolean computeSize )
 		__symText = null;
 	}
 	else if ( nodeType == NODE_TYPE_OTHER ) {
-		__symbol = new GRSymbol(GRSymbol.SYM_CIR, symbolStyle, symbolColor, symbolColor, ICON_DIAM, ICON_DIAM);
+		__symbol = new GRSymbol(GRSymbol.SYM_CIR, symbolStyle, symbolColor, symbolColor, iconDiameter, iconDiameter);
 		__symText = "O";
 	}
 	else if ( nodeType == NODE_TYPE_PLAN ) {
-		__symbol = new GRSymbol(GRSymbol.SYM_FCIR, symbolStyle, GRColor.lightGray, symbolColor, ICON_DIAM, ICON_DIAM);
+		__symbol = new GRSymbol(GRSymbol.SYM_FCIR, symbolStyle, GRColor.lightGray, symbolColor, iconDiameter, iconDiameter);
 		__symText = "PL";
 	}
 	else if ( nodeType == NODE_TYPE_RES ) {
-		__symbol = new GRSymbol(GRSymbol.SYM_FRTRI, symbolStyle, symbolColor, symbolColor, ICON_DIAM, ICON_DIAM);
+		__symbol = new GRSymbol(GRSymbol.SYM_FRTRI, symbolStyle, symbolColor, symbolColor, iconDiameter, iconDiameter);
 		__symText = null;
 	}
 	else if ( nodeType == NODE_TYPE_WELL ) {
-		__symbol = new GRSymbol(GRSymbol.SYM_CIR, symbolStyle, symbolColor, symbolColor, ICON_DIAM, ICON_DIAM);
+		__symbol = new GRSymbol(GRSymbol.SYM_CIR, symbolStyle, symbolColor, symbolColor, iconDiameter, iconDiameter);
 		__symText = "W";
 	}
 	else {
