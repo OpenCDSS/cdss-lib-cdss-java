@@ -292,14 +292,15 @@ WIS format row associated with this node.  WIS-specific.
 // FIXME SAM 2008-03-15 Need to remove WIS from this general class
 
 /**
-The size of the icon in pixels on the screen (or drawing device).  This is a space that will be
-filled by the specific symbol that is chosen for the node.
+The size of the icon in drawing units (points for printing, pixels for screen).
+This is a space that will be filled by the specific symbol that is chosen for the node.
 */
 private int __iconDiameter = 20;
 
 /**
-The extra space around the node icon for displaying the extra shape decorator
-showing that it is a natural flow node (big circle) or import (big square).
+The extra space around the node icon in drawing units for displaying the extra shape decorator
+showing that it is a natural flow node (big circle) or import (big square).  For example, if
+the icon diameter is 20, the extra diameter is generally 1/3 of this value (to be added to the icon diameter.
 */
 private int __decoratorDiameter = 6;
 
@@ -976,7 +977,7 @@ Draws this node on the network editor display.
 @param da the GRJComponentDrawingArea on which to draw the node.
 */
 private void drawNodeForNetwork(GRJComponentDrawingArea da) {
-	String routine = "HydrologyNode.drawNetwork";
+	String routine = "HydrologyNode.drawNodeForNetwork";
 
 	double symbolSize = 0;
 	// Symbol to be drawn as core - others may be drawn to decorate and reservoir symbol orientation
@@ -2615,9 +2616,9 @@ public static void setDrawText(boolean drawText) {
 
 /**
 Sets the icon diameter.  The decorator icon diameter will be computed accordingly.
-@param iconDiameter size of the icon diameter in pixels.  
+@param iconDiameter size of the icon diameter in drawing units (points for printing, pixels for screen).  
 */
-public void setIconDiameter(int iconDiameter)
+public void setIconDiameter ( int iconDiameter )
 {
 	__iconDiameter = iconDiameter;
 	int third = __iconDiameter / 3;

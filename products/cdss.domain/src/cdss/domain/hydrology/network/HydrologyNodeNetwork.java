@@ -381,6 +381,14 @@ private double
 	__netRX = -999.0,
 	__netTY = -999.0;
 
+/**
+The extra edge around drawn data to be used for visualization, in network coordinate units, left, right, top, bottom.
+This is highly dependent on the layout.  For example, the buffer on the left and right may need to be
+larger to allow for horizontal labels whereas the buffer on the top and bottom can be less because
+labels do not have much height.
+*/
+private double [] __edgeBuffer = { 0.0, 0.0, 0.0, 0.0 };
+
 // FIXME SAM 2008-03-17 The following seems fragile given hand-off between methods.
 /**
 Used when interpolating node locations.
@@ -3590,6 +3598,15 @@ public static HydrologyNode getDownstreamNode(HydrologyNode node, int flag) {
 }
 
 /**
+Return the edge buffer values.
+@return the edge buffer values (left, right, top, bottom, in X,Y data units).
+*/
+public double [] getEdgeBuffer ()
+{
+	return this.__edgeBuffer;
+}
+
+/**
 Return the name of the input file for this network, or null if not available (is being created).
 @return the name of the input file.
 */
@@ -4960,6 +4977,15 @@ public void setCheckFile(PrintWriter checkfp) {
 }
 
 /**
+Set the edge buffer values.
+@param edgeBuffer the edge buffer values (left, right, top, bottom, in X,Y data units).
+*/
+public void setEdgeBuffer ( double [] edgeBuffer )
+{
+	__edgeBuffer = edgeBuffer;
+}
+
+/**
 Set the font to use for drawing.
 @param font Font name (currently not set)
 @param size Size in data units.
@@ -5448,7 +5474,7 @@ throws Exception
 	// What could be done is to get the extent from the data (including legend and annotations?) and
 	// then center on the page limits with some buffer around the edge nodes to allow for labels, and growth.
 	writeXML(filename, determineExtentFromNetworkData(), getLayoutList(), getAnnotationList(),
-		getLinkList(), getLegendLocation());
+		getLinkList(), getLegendLocation(), getEdgeBuffer() );
 }
 
 /**
@@ -5474,7 +5500,7 @@ automatically placed on the network next time the network is opened from the fil
 @throws Exception if there is an error writing the network.
 */
 public void writeXML(String filename, GRLimits limits, List<PropList> layouts,
-		List<HydrologyNode> annotations, List<PropList> links, GRLimits legendLimits) 
+		List<HydrologyNode> annotations, List<PropList> links, GRLimits legendLimits, double [] edgeBuffer ) 
 throws Exception
 {	String routine = getClass().getName() + ".writeXML";
 	Message.printStatus(2, routine, "Writing XML network with limits=" + limits );
@@ -5595,6 +5621,20 @@ format =
 + comment + "                       display the network, determined from"  +n
 + comment + "                       node coordinates." + n
 + comment + n
++ comment + "   EdgeBufferLeft      Extra edge in node coordinate units to add" + n
++ comment + "                       to the left of the left-most " + n
++ comment + "                       node, to allow for labels and annotations." + n
++ comment + n
++ comment + "   EdgeBufferRight     Extra edge in node coordinate units to add" + n
++ comment + "                       to the right of the left-most " + n
++ comment + "                       node, to allow for labels and annotations." + n
++ comment + n
++ comment + "   EdgeBufferTop       Extra edge in node coordinate units to add above" + n
++ comment + "                       the top-most node, to allow for labels and annotations." + n
++ comment + n
++ comment + "   EdgeBufferRight     Extra edge in node coordinate units to add below" + n
++ comment + "                       the bottom-most node, to allow for labels and annotations." + n
++ comment + n
 + comment + "   LegendX             The X coordinate of the lower-left point" +n
 + comment + "                       of the legend." + n
 + comment + n
@@ -5637,10 +5677,10 @@ format =
 + comment + "                          Portrait" + n
 + comment + n
 + comment + "      NodeLabelFontSize Indicates the size (in points) of the" + n
-+ comment + "                       font used for node labels." + n
++ comment + "                       font used for node labels.  72 points = 1 inch." + n
 + comment + n
 + comment + "      NodeSize         Indicates the size (in points) of the" + n
-+ comment + "                       symbol used to represent a node." + n
++ comment + "                       symbol used to represent a node.  72 points = 1 inch." + n
 + comment + n
 + comment + "   <Node>              Data element for a node in the network." + n
 + comment + n
@@ -5828,7 +5868,7 @@ format =
 			limits.setTopY(1.0);
 		}
 	}
-	if (limits != null && legendLimits == null) {
+	if ( limits != null ) {
 		out.print("    XMin = \"" 
 			+ StringUtil.formatString(limits.getLeftX(), "%13.6f").trim() + "\"" + n);
 		out.print("    YMin = \"" 
@@ -5836,25 +5876,26 @@ format =
 		out.print("    XMax = \"" 
 			+ StringUtil.formatString(limits.getRightX(), "%13.6f").trim() + "\"" + n);
 		out.print("    YMax = \"" 
-			+ StringUtil.formatString(limits.getTopY(), "%13.6f").trim() + "\">" + n);
+			+ StringUtil.formatString(limits.getTopY(), "%13.6f").trim() + "\"");
 	}
-	else if (limits != null && legendLimits != null) {
-		out.print("    XMin = \"" 
-			+ StringUtil.formatString(limits.getLeftX(), "%13.6f").trim() + "\"" + n);
-		out.print("    YMin = \"" 
-			+ StringUtil.formatString(limits.getBottomY(), "%13.6f").trim() + "\"" + n);
-		out.print("    XMax = \"" 
-			+ StringUtil.formatString(limits.getRightX(), "%13.6f").trim() + "\"" + n);
-		out.print("    YMax = \"" 
-			+ StringUtil.formatString(limits.getTopY(), "%13.6f").trim() + "\"" + n);
-		out.print("    LegendX = \"" 
+	if ( edgeBuffer != null ) {
+		out.print(n + "    EdgeBufferLeft = \"" 
+			+ StringUtil.formatString(edgeBuffer[0], "%13.6f").trim() + "\"" + n);
+		out.print("    EdgeBufferRight = \"" 
+			+ StringUtil.formatString(edgeBuffer[1], "%13.6f").trim() + "\"" + n);
+		out.print("    EdgeBufferTop = \"" 
+			+ StringUtil.formatString(edgeBuffer[2], "%13.6f").trim() + "\"" + n);
+		out.print("    EdgeBufferBottom = \"" 
+			+ StringUtil.formatString(edgeBuffer[3], "%13.6f").trim() + "\"");
+	}
+	if ( legendLimits != null ) {
+		out.print(n + "    LegendX = \"" 
 			+ StringUtil.formatString(legendLimits.getLeftX(), "%13.6f").trim()+ "\"" + n);
 		out.print("    LegendY = \"" 
-			+ StringUtil.formatString(legendLimits.getBottomY(), "%13.6f").trim()+ "\">" + n);
+			+ StringUtil.formatString(legendLimits.getBottomY(), "%13.6f").trim()+ "\"" );
 	}
-	else {
-		out.print(">");
-	}
+	// Close the StateMod_Network element
+	out.print(">" + n );
 
 	if ( (layouts == null) || (layouts.size() == 0) ) { 
 		// Add a default layout...
