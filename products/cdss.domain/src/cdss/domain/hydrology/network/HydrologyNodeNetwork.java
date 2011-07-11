@@ -5832,21 +5832,36 @@ format =
 + comment + n;
 	out.print(format);	
 format = 
-  comment + "   <Link>              Data element for a network link." + n
+  comment + "   <Link>              Data element for a network link, used to" + n
++ comment + "                       indicate relationships between nodes but are" + n
++ comment + "                       not used by StateMod." + n
 + comment + n
-+ comment + "         FromNodeID    The ID of the node from which the link" + n
-+ comment + "                       is drawn." + n
-+ comment + n
-+ comment + "         LineStyle     The style in which the link line is " + n
-+ comment + "                       drawn.  The only recognized value is: " + n
-+ comment + "                          Dashed" + n
++ comment + "         ID            The link identifier, for editing purposes." + n
 + comment + n              
 + comment + "         ShapeType     The type of shape being drawn.  The only"+ n
 + comment + "                       recognized value is: " + n
 + comment + "                          Link" + n
++ comment + n
++ comment + "         FromNodeID    The ID of the node from which the link" + n
++ comment + "                       is drawn." + n
 + comment + n  
 + comment + "         ToNodeID      The ID of the node to which the link" + n
 + comment + "                       is drawn." + n
++ comment + n
++ comment + "         LineStyle     The style in which the link line is " + n
++ comment + "                       drawn.  Recognized values are: " + n
++ comment + "                          Dashed" + n
++ comment + "                          Solid" + n
++ comment + n
++ comment + "         FromArrowStyle" + n
++ comment + "                       The arrow on the FromNodeID side: " + n
++ comment + "                          None" + n
++ comment + "                          Solid" + n
++ comment + n
++ comment + "         ToArrowStyle" + n
++ comment + "                       The arrow on the ToNodeID side: " + n
++ comment + "                          None" + n
++ comment + "                          Solid" + n
 + comment + n;
 	out.print(format);	
 
@@ -5976,29 +5991,67 @@ format =
 		}
 	}
 
-	String link = null;
+	String linkData = null;
 
 	if ( (links != null) && (links.size() > 0) ) {
 		out.print("" + n);
-		int size = links.size();
-		PropList p = null;
-		for (int i = 0; i < size; i++) {
-			p = links.get(i);
+		for ( PropList p : links ) {
 			out.print("    <Link" + n);
 			out.print("         ShapeType=\"Link\"" + n);
-			out.print("         LineStyle=\"Dashed\"" + n);
 
-			link = p.getValue("FromNodeID");
-			link = StringUtil.replaceString(link, "&", "&amp;");
-			link = StringUtil.replaceString(link, "<", "&lt;");
-			link = StringUtil.replaceString(link, ">", "&gt;");
-			out.print("         FromNodeID=\"" + link + "\"" + n);
+			linkData = p.getValue("ID");
+			if ( linkData == null ) {
+				linkData = "";
+			}
+			linkData = StringUtil.replaceString(linkData, "&", "&amp;");
+			linkData = StringUtil.replaceString(linkData, "<", "&lt;");
+			linkData = StringUtil.replaceString(linkData, ">", "&gt;");
+			out.print("         ID=\"" + linkData + "\"" + n);
+			
+			linkData = p.getValue("FromNodeID");
+			if ( linkData == null ) {
+				linkData = "";
+			}
+			linkData = StringUtil.replaceString(linkData, "&", "&amp;");
+			linkData = StringUtil.replaceString(linkData, "<", "&lt;");
+			linkData = StringUtil.replaceString(linkData, ">", "&gt;");
+			out.print("         FromNodeID=\"" + linkData + "\"" + n);
 
-			link = p.getValue("ToNodeID");
-			link = StringUtil.replaceString(link, "&", "&amp;");
-			link = StringUtil.replaceString(link, "<", "&lt;");
-			link = StringUtil.replaceString(link, ">", "&gt;");
-			out.print("         ToNodeID=\"" + link + "\"/>" + n);
+			linkData = p.getValue("ToNodeID");
+			if ( linkData == null ) {
+				linkData = "";
+			}
+			linkData = StringUtil.replaceString(linkData, "&", "&amp;");
+			linkData = StringUtil.replaceString(linkData, "<", "&lt;");
+			linkData = StringUtil.replaceString(linkData, ">", "&gt;");
+			out.print("         ToNodeID=\"" + linkData + "\"" + n);
+			
+			linkData = p.getValue("LineStyle");
+			if ( linkData == null ) {
+				linkData = "";
+			}
+			linkData = StringUtil.replaceString(linkData, "&", "&amp;");
+			linkData = StringUtil.replaceString(linkData, "<", "&lt;");
+			linkData = StringUtil.replaceString(linkData, ">", "&gt;");
+			out.print("         LineStyle=\"" + linkData + "\"" + n);
+			
+			linkData = p.getValue("FromArrowStyle");
+			if ( linkData == null ) {
+				linkData = "";
+			}
+			linkData = StringUtil.replaceString(linkData, "&", "&amp;");
+			linkData = StringUtil.replaceString(linkData, "<", "&lt;");
+			linkData = StringUtil.replaceString(linkData, ">", "&gt;");
+			out.print("         FromArrowStyle=\"" + linkData + "\"" + n);
+			
+			linkData = p.getValue("ToArrowStyle");
+			if ( linkData == null ) {
+				linkData = "";
+			}
+			linkData = StringUtil.replaceString(linkData, "&", "&amp;");
+			linkData = StringUtil.replaceString(linkData, "<", "&lt;");
+			linkData = StringUtil.replaceString(linkData, ">", "&gt;");
+			out.print("         ToArrowStyle=\"" + linkData + "\"/>" + n); // Close element
 		}
 	}
 
