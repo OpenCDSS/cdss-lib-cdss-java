@@ -534,8 +534,9 @@ Adds a node the network.
 @param dsid the id of the node immediately downstream of this node.
 @param isNaturalFlow whether the node is a natural flow node or not.
 @param isImport whether the node is an import node or not.
+@return the node that is added
 */
-public void addNode(String id, int type, String usid, String dsid, boolean isNaturalFlow, boolean isImport) {
+public HydrologyNode addNode(String id, int type, String usid, String dsid, boolean isNaturalFlow, boolean isImport) {
 /*
 	Message.printStatus(2, "", "Adding '" + id + "', linking upstream to '"
 		+ usid + " and downstream to '" + dsid + "'  (" + type + ")"
@@ -769,6 +770,7 @@ public void addNode(String id, int type, String usid, String dsid, boolean isNat
 			}
 		}
 	}
+	return addNode;
 }
 
 /**
@@ -3381,7 +3383,7 @@ public List<HydrologyNodeNetworkLabel> getLabelList() {
 
 /**
 Returns a list of all the nodes in the network that are natural flow nodes.
-@return a list of all the nodes that are natural flow nodes.  The kust is guaranteed to be non-null.
+@return a list of all the nodes that are natural flow nodes.  The list is guaranteed to be non-null.
 */
 public List<HydrologyNode> getBaseflowNodes() {
 	List<HydrologyNode> v = new Vector();
