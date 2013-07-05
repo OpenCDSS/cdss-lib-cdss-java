@@ -413,7 +413,7 @@ private String __waterString;
 /**
 List of nodes directly upstream of this node.
 */
-private List<HydrologyNode> __upstream = new Vector();
+private List<HydrologyNode> __upstream = new Vector<HydrologyNode>();
 
 //--------------------------------------------------------------------------
 // Data members used solely with the network drawing code.
