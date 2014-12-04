@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project name="cdss.domain-test" default="all-tests" basedir=".">
 
-    <import file="../../rtibuild/common-test.xml"/>
+    <import file="../../cdss-util-buildtools/common-test.xml"/>
     
 </project>

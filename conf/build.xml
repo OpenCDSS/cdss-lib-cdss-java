@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project name="cdss.domain" default="compile" basedir="../">
 
-    <import file="../../rtibuild/common-build.xml"/>
+    <import file="../../cdss-util-buildtools/common-build.xml"/>
     
 </project>
