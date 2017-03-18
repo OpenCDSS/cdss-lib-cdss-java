@@ -459,25 +459,25 @@ List of the annotations that are drawn with this network.  Note that these are p
 annotations like lines, which should not be confused with the run-time annotations applied by
 software like the StateMod GUI (which do not persist in the network file).
 */
-private List<HydrologyNode> __annotationList = new Vector();
+private List<HydrologyNode> __annotationList = new Vector<HydrologyNode>();
 
 /**
 Network labels.
 */
-private List<HydrologyNodeNetworkLabel> __labelList = new Vector();
+private List<HydrologyNodeNetworkLabel> __labelList = new Vector<HydrologyNodeNetworkLabel>();
 
 // TODO SAM 2011-01-04 The XMin, YMin, XMax, YMax properties might need to be stored with the layout
 // rather than the whole network in order to buffer the page boundaries properly.
 /**
 List for holding layouts read in from an XML file. 
 */
-private List<PropList> __layoutList = new Vector();
+private List<PropList> __layoutList = new Vector<PropList>();
 
 /**
 List of links between nodes that are drawn with this network.
 The PropList contains FromNodeID and ToNodeID as the properties.
 */
-private List<PropList> __linkList = new Vector();
+private List<PropList> __linkList = new Vector<PropList>();
 
 /**
 Constructor.
@@ -558,7 +558,7 @@ public HydrologyNode addNode(String id, int type, String usid, String dsid, bool
 	HydrologyNode ds = null;
 	HydrologyNode us = null;
 	HydrologyNode node = getMostUpstreamNode();
-	List<HydrologyNode> v = new Vector();
+	List<HydrologyNode> v = new Vector<HydrologyNode>();
 
 	// loop through the network and do two things:
 	// 1) add all the nodes to a Vector so that they can easily be
@@ -803,7 +803,7 @@ public void calculateNetworkNodeData(List<HydrologyNode> nodesV, boolean endFirs
 
 	// Create a hashtable that maps all the node IDs to an integer.  This
 	// integer points to the location within the array where the node can be found.
-	Hashtable hash = new Hashtable(size);
+	Hashtable<String,Integer> hash = new Hashtable<String,Integer>(size);
 	for (int i = 0; i < size; i++) {
 		hash.put(nodes[i].getCommonID(), new Integer(i));
 	}
@@ -896,7 +896,7 @@ public void calculateNetworkNodeData(List<HydrologyNode> nodesV, boolean endFirs
 		}
 	}
 	
-	List<HydrologyNode> networkV = new Vector(size);
+	List<HydrologyNode> networkV = new Vector<HydrologyNode>(size);
 	for (int i = size - 1; i >= 0; i--) {
 		networkV.add(nodes[i]);		
 	}
@@ -939,7 +939,7 @@ A recursive helper method for calculateNetworkNodeData.
 @param highestReach this node's value for the highest reach number seen so far.
 */
 private int calculateNetworkNodeDataHelper(int nodeNum, HydrologyNode[] nodes, 
-Hashtable hash, int reachCounter, int nodeInReachNumber, int tributaryNumber,
+Hashtable<String,Integer> hash, int reachCounter, int nodeInReachNumber, int tributaryNumber,
 int highestReach) {
 //	Message.printStatus(2, "", 
 //		" fvdh: #" + StringUtil.formatString(nodeNum, "%03d")
@@ -1086,7 +1086,7 @@ Converts old-style base flow nodes into new style nodes (other node type with an
 whether a natural flow and/or import location).
 */
 public void convertNodeTypes() {
-	List<HydrologyNode> nodes = new Vector();
+	List<HydrologyNode> nodes = new Vector<HydrologyNode>();
 	String routine = "HydroBase_NodeNetwork.convertNodeTypes";
 	HydrologyNode node = getMostUpstreamNode();	
 	while (true) {
@@ -1125,7 +1125,7 @@ Create the indented river network as a list of strings
 public List<String> createIndentedRiverNetworkStrings() {
 	int dl = 30;
 	String routine = "HydroBase_NodeNetwork.createIndentedRiverNetworkStrings";
-	List<String> v = new Vector(50, 20);
+	List<String> v = new Vector<String>();
 	v.add("# Stream Network Data");
 	v.add("#");
 	v.add("# Data fields are:");
@@ -1288,6 +1288,11 @@ public boolean createRiverOrderFile(String basename, int flag) {
 		Message.printWarning(2, routine, e);
 		return false;
 	}
+	finally {
+		if ( orderfp != null ) {
+			orderfp.close();
+		}
+	}
 
 	//try {}
 	orderfp.println("# " + orderFile + " - River order file");
@@ -1387,7 +1392,7 @@ TODO (JTS - 2004-04-14)<br> Inefficient!!  This could really be improved.
 public void deleteNode(String id) {
 	boolean done = false;
 	HydrologyNode node = getMostUpstreamNode();
-	List<HydrologyNode> v = new Vector();
+	List<HydrologyNode> v = new Vector<HydrologyNode>();
 
 	// First loop through all the nodes and put them in a list so that
 	// they can be accessed via a random access method.  
@@ -1526,7 +1531,7 @@ public void deleteNode(String id) {
 	}
 	*/
 
-	List<HydrologyNode> tempV = new Vector();
+	List<HydrologyNode> tempV = new Vector<HydrologyNode>();
 	for (int i = 0; i < delUsid.length; i++) {
 		for (int j = 0; j < size; j++) {
 			if (nodes[j].getCommonID().equals(delUsid[i])) {
@@ -1787,7 +1792,7 @@ public void deleteNode(String id) {
 	
 	// put the nodes into a vector in order to use the setNetworkFromNodes() method.
 
-	v = new Vector();
+	v = new Vector<HydrologyNode>();
 	for (int i = 0; i < size; i++) {
 		v.add(nodes[i]);
 	}	
@@ -2122,7 +2127,7 @@ protected void fillMainStemLocations() {
 	int dl = 0;
 	int upstreamInvalidCount = 0;
 	int validCount = 0;
-	List dv;
+	List<Object> dv;
 
 	while (!done) {
 		if (node.getReachLevel() != 1) {
@@ -2723,13 +2728,13 @@ private int findHighestUpstreamSerial(HydrologyNode node, int highest) {
 		highest = serial;
 	}
 
-	List v = node.getUpstreamNodes();
+	List<HydrologyNode> v = node.getUpstreamNodes();
 	if (v != null) {
 		int size = v.size();
 		int temp = -1;
 		HydrologyNode tempNode = null;
 		for (int i = 0; i < size; i++) {
-			tempNode = (HydrologyNode)v.get(i);
+			tempNode = v.get(i);
 			temp = findHighestUpstreamSerial(tempNode, highest);
 			if (temp > highest) {
 				highest = temp;
@@ -2871,6 +2876,7 @@ public HydrologyNode findNode(int dataTypeToFind, int nodeTypeToFind, String dat
 	for (HydrologyNode nodePt = getUpstreamNode(__nodeHead, POSITION_ABSOLUTE);
 		nodePt.getDownstreamNode() != null;
 		nodePt = getDownstreamNode(nodePt, POSITION_COMPUTATIONAL)) {
+		// TODO sam 2017-03-15 why is the following indicated as dead code in Eclipse?
 		if (nodePt == null) {
 			break;
 		}
@@ -3142,7 +3148,7 @@ functionality when processing StateMod_StreamEstimate_Coefficients in StateDMI (
 that should be treated as upstream gages).
 @param recursing false if calling from outside this method, true if calling recursively.
 */
-public List<HydrologyNode> findUpstreamFlowNodes(List upstreamFlowNodes,
+public List<HydrologyNode> findUpstreamFlowNodes(List<HydrologyNode> upstreamFlowNodes,
 	HydrologyNode node, UpstreamFlowNodeI upstreamFlowNodeI, boolean recursing)
 {
 	String routine = "HydroBase_NodeNetwork.findUpstreamFlowNodes";
@@ -3386,7 +3392,7 @@ Returns a list of all the nodes in the network that are natural flow nodes.
 @return a list of all the nodes that are natural flow nodes.  The list is guaranteed to be non-null.
 */
 public List<HydrologyNode> getBaseflowNodes() {
-	List<HydrologyNode> v = new Vector();
+	List<HydrologyNode> v = new Vector<HydrologyNode>();
 
 	HydrologyNode node = getMostUpstreamNode();
 	// TODO -- eliminate the need for hold nodes -- they signify an error in the network.
@@ -3699,7 +3705,7 @@ a certain kind of node is present in the network.
 @return a List of Strings, guaranteed to be non-null.
 */
 public List<String> getNodeCountsVector() {
-	List<String> v = new Vector();
+	List<String> v = new Vector<String>();
 	int total = 12;
 	int[] types = new int[total];
 	types[0] = HydrologyNode.NODE_TYPE_BASEFLOW;
@@ -3751,7 +3757,7 @@ code that uses this list should also go upstream to downstream for fastest perfo
 public List<String> getNodeIdentifiersByType(int[] nodeTypes)
 throws Exception {
 	String routine = "HydroBase_NodeNetwork.getNodeIdentifiersByType";
-	List<String> ids = new Vector();
+	List<String> ids = new Vector<String>();
 
 	try {
 		// Main try for method
@@ -3882,7 +3888,7 @@ and end node (anything that would persist to a file).
 guaranteed to be non-null and is in the order upstream to downstream.
 */
 public List<HydrologyNode> getNodeList()
-{	List<HydrologyNode> nodeList = new Vector();
+{	List<HydrologyNode> nodeList = new Vector<HydrologyNode>();
 
 	HydrologyNode node = getMostUpstreamNode();
 	// TODO -- eliminate the need for hold nodes -- they signify an error in the network.
@@ -3922,12 +3928,12 @@ for the other in downstream fashion.
 */
 public List<HydrologyNode> getNodeSequence ( HydrologyNode node1, HydrologyNode node2 )
 {
-	List<HydrologyNode> nodeList = new Vector();
+	List<HydrologyNode> nodeList = new Vector<HydrologyNode>();
 	HydrologyNode node = node1;
 	while (true) {
 		if ( node == null ) {
 			// End of network so have not found the sequence...
-			return new Vector();
+			return new Vector<HydrologyNode>();
 		}
 		else if ( node.getCommonID().equalsIgnoreCase(node2.getCommonID()) ) {
 			// Found the end of the sequence
@@ -3948,12 +3954,12 @@ public List<HydrologyNode> getNodeSequence ( HydrologyNode node1, HydrologyNode 
 	
 	// If here did not find node2 so try the other order...
 	
-	nodeList = new Vector();
+	nodeList = new Vector<HydrologyNode>();
 	node = node2;
 	while (true) {
 		if ( node == null ) {
 			// End of network so have not found the sequence...
-			return new Vector();
+			return new Vector<HydrologyNode>();
 		}
 		else if ( node.getCommonID().equalsIgnoreCase(node1.getCommonID()) ) {
 			// Found the end of the sequence
@@ -3975,14 +3981,14 @@ public List<HydrologyNode> getNodeSequence ( HydrologyNode node1, HydrologyNode 
 	// If here could not find a sequence.  Try moving downstream from each node to see if they meet
 	// on a common stream.
 	
-	List<HydrologyNode> nodeListA = new Vector();
+	List<HydrologyNode> nodeListA = new Vector<HydrologyNode>();
 	HydrologyNode nodeA = node1;
-	List<HydrologyNode> nodeListB = new Vector();
+	List<HydrologyNode> nodeListB = new Vector<HydrologyNode>();
 	HydrologyNode nodeB = null;
 	while (true) {
 		if ( nodeA == null ) {
 			// End of network so have not found the sequence...
-			return new Vector();
+			return new Vector<HydrologyNode>();
 		}
 		else if ( nodeA.getType() == HydrologyNode.NODE_TYPE_END ) {
 			// End of the network without finding common node downstream of node2 so break
@@ -3995,7 +4001,7 @@ public List<HydrologyNode> getNodeSequence ( HydrologyNode node1, HydrologyNode 
 			while ( true ) {
 				if ( nodeB == null ) {
 					// End of network so have not found the sequence...
-					return new Vector();
+					return new Vector<HydrologyNode>();
 				}
 				else if ( nodeA == nodeB ) {
 					// Match a node so add the lists together and return
@@ -4023,7 +4029,7 @@ public List<HydrologyNode> getNodeSequence ( HydrologyNode node1, HydrologyNode 
 		nodeA = getDownstreamNode(nodeA,POSITION_RELATIVE);
 	}
 	
-	return new Vector();
+	return new Vector<HydrologyNode>();
 }
 
 /**
@@ -4035,7 +4041,7 @@ which are only used in the network diagram).
 guaranteed to be non-null and is in the order upstream to downstream.
 */
 public List<HydrologyNode> getNodesForType(int type)
-{	List<HydrologyNode> v = new Vector();
+{	List<HydrologyNode> v = new Vector<HydrologyNode>();
 
 	HydrologyNode node = getMostUpstreamNode();
 	// TODO -- eliminate the need for hold nodes -- they signify an error in the network.
@@ -4091,6 +4097,13 @@ public double getRX() {
 }
 
 /**
+ * Return the network title.
+ */
+public String getTitle () {
+	return __title;
+}
+
+/**
 Returns the top Y bound of a network read from XML.
 @return the top Y bound of a network read from XML.
 */
@@ -4105,14 +4118,14 @@ Gets the first downstream node from the specified node that has valid X and Y lo
 element), and the second element is an Integer of the distance from node 
 to the downstream node.  If none can be found, the first element is null and the second is -1.
 */
-private List getValidDownstreamNode(HydrologyNode node, boolean main) {
+private List<Object> getValidDownstreamNode(HydrologyNode node, boolean main) {
 	boolean done = false;
 	HydrologyNode ds = null;
 	HydrologyNode temp = null;
 	int count = 1;
 	int reachLevel = node.getReachLevel();
 	int currReach = reachLevel - 1;
-	List v = new Vector();
+	List<Object> v = new Vector<Object>();
 	
 	ds = getDownstreamNode(node, POSITION_RELATIVE);	
 
@@ -4421,7 +4434,7 @@ public static HydrologyNode getUpstreamNode(HydrologyNode node, int flag) {
 		// Get the next upstream node on the same reach.  This will be
 		// a node with the same reach counter.
 		// FIXME SAM 2011-01-05 never gets beyond i=0 due to checks.
-		for (i = 0; i < node.getNumUpstreamNodes(); i++) {
+		for (i = 0; i < node.getNumUpstreamNodes(); ) {
 			nodePt = node.getUpstreamNode(i);
 			if (nodePt == null) {
 				// Should not happen if the number of nodes came back OK...
@@ -4940,7 +4953,7 @@ Sets the annotations associated with this network.
 */
 public void setAnnotationList(List<HydrologyNode> annotationList) {
 	if ( annotationList == null ) {
-		__annotationList = new Vector();
+		__annotationList = new Vector<HydrologyNode>();
 	}
 	else {
 		__annotationList = annotationList;
@@ -5044,7 +5057,7 @@ Sets the layout list read in from XML.
 protected void setLayoutList(List<PropList> layoutList)
 {
 	if ( layoutList == null ) {
-		__layoutList = new Vector();
+		__layoutList = new Vector<PropList>();
 	}
 	else {
 		__layoutList = layoutList;
@@ -5069,7 +5082,7 @@ Sets the list of links between nodes in the network.
 public void setLinkList(List<PropList> linkList)
 {
 	if ( linkList == null ) {
-		__linkList = new Vector();
+		__linkList = new Vector<PropList>();
 	}
 	else {
 		__linkList = linkList;
@@ -5296,11 +5309,7 @@ maintained.  Otherwise the file will be overwritten.
 public static void writeListFile ( String filename, String delimiter, boolean update,
 	List<HydrologyNode> nodes, String [] comments, boolean verbose )
 throws Exception
-{	int size = 0;
-	if (nodes != null) {
-		size = nodes.size();
-	}
-	if ( delimiter == null ) {
+{	if ( delimiter == null ) {
 		delimiter = ",";
 	}
 	
