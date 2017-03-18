@@ -589,7 +589,7 @@ public boolean addDownstreamNode(HydrologyNode downstream_node) {
 		// Use the common identifier to find the element to reset...
 		int pos = __downstream.getUpstreamNodePosition(getCommonID());
 		if (pos >= 0) {
-			List downstreamUpstream = __downstream.getUpstreamNodes();
+			List<HydrologyNode> downstreamUpstream = __downstream.getUpstreamNodes();
 			if (downstreamUpstream != null) {
 				downstreamUpstream.set(pos,downstream_node);
 			}
@@ -661,7 +661,7 @@ public boolean addUpstreamNode(HydrologyNode upstream_node) {
 		}
 		if (__upstream == null) {
 			// Need to allocate space for it...
-			__upstream = new Vector();
+			__upstream = new Vector<HydrologyNode>();
 		}
 		__upstream.add(upstream_node);
 	
@@ -687,7 +687,7 @@ Adds an id to the list of upstream node ids.  Used by the network drawing code.
 */
 public void addUpstreamNodeID(String id) {
 	if (__upstreamNodeIDs == null) {
-		__upstreamNodeIDs = new Vector();
+		__upstreamNodeIDs = new Vector<String>();
 	}
 	__upstreamNodeIDs.add(id);
 }
@@ -787,7 +787,7 @@ private void calculateNodeExtentForNetwork(GRJComponentDrawingArea da) {
 	String label = __label;
 
 	if (__symbol != null) {
-		double width = getIconDiameter();
+		//double width = getIconDiameter();
 		double height = getIconDiameter();
 	
 		if (__label != null) {
@@ -795,7 +795,7 @@ private void calculateNodeExtentForNetwork(GRJComponentDrawingArea da) {
 			if (limits.getHeight() > height) {
 				height = limits.getHeight();
 			}
-			width += 4 + limits.getWidth();
+			//width += 4 + limits.getWidth();
 		}
 	}
 	
@@ -2383,9 +2383,9 @@ public boolean parseAreaPrecip(String string0) {
 	}
 	else if (nfields == 2) {
 		// Assume that we have a valid theOperator and do the math...
-		List v = StringUtil.breakStringList(string, " \t", 0);
-		area = (String)v.get(0);
-		precip = (String)v.get(1);
+		List<String> v = StringUtil.breakStringList(string, " \t", 0);
+		area = v.get(0);
+		precip = v.get(1);
 		double a = (new Double(area)).doubleValue();
 		double p = (new Double(precip)).doubleValue();
 		double water = 0;
@@ -3069,7 +3069,7 @@ Sets the list of nodes upstream of this node.  Used by the network diagramming t
 public void setUpstreamNodes(List<HydrologyNode> v)
 {
 	if ( v == null ) {
-		__upstream = new Vector();
+		__upstream = new Vector<HydrologyNode>();
 	}
 	else {
 		__upstream = v;
