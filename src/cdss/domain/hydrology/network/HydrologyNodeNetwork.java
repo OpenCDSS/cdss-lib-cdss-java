@@ -232,11 +232,13 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Vector;
+
+import org.openwaterfoundation.network.NodeNetwork;
 
 import RTi.GR.GRLimits;
 import RTi.GR.GRText;
@@ -255,7 +257,7 @@ This class contains all the information necessary to manage a network of Node no
 which represent a hydrologic network (topology) as a linked list of upstream/doLwnstream
 nodes.  Node types are those seen in CDSS.
 */
-public class HydrologyNodeNetwork
+public class HydrologyNodeNetwork implements NodeNetwork
 {
 
 /**
@@ -360,6 +362,16 @@ Whether this network is being displayed in a WIS or not.
 */
 // FIXME SAM 2008-03-15 Need to remove WIS code
 //private boolean __inWIS = true;
+
+/**
+ * Identifier for the network.
+ */
+private String __networkId = "";
+
+/**
+ * Name for the network.
+ */
+private String __networkName = "";
 
 /**
 Whether the legend position was read from an XML file.
@@ -480,18 +492,40 @@ The PropList contains FromNodeID and ToNodeID as the properties.
 private List<PropList> __linkList = new Vector<PropList>();
 
 /**
-Constructor.
+Constructor.  Network ID and name are blank and no end node is added.
 */
 public HydrologyNodeNetwork() {
 	this(false);
 }
 
 /**
-Constructor.
+Constructor.  No end node is added.
+@param networkId identifier for network.
+@param networkName name for network.
+*/
+public HydrologyNodeNetwork(String networkId, String networkName ) {
+	this(false);
+}
+
+/**
+Constructor.  Network ID and name are blank.
 @param addEndNode if true an end node will automatically be added at initialization.
 */
 public HydrologyNodeNetwork(boolean addEndNode)
 {
+	this("","",false);
+}
+
+/**
+Constructor.
+@param networkId identifier for network.
+@param networkName name for network.
+@param addEndNode if true an end node will automatically be added at initialization.
+*/
+public HydrologyNodeNetwork(String networkId, String networkName, boolean addEndNode)
+{
+	this.__networkId = networkId;
+	this.__networkName = networkName;
 	initialize();
 
 	if (addEndNode) {
@@ -527,46 +561,46 @@ protected void addLabel(double x, double y, double size, int flag, String label)
 }
 
 /**
-Adds a node the network.
-@param id the id of the node to add.
-@param type the kind of node to add.
-@param usid the id of the node immediately upstream of this node.  Can be null.
-@param dsid the id of the node immediately downstream of this node.
+Adds a node the network.  Nodes can be added in any order but if added in random order connections may not be properly built
+@param nodeId the id of the node to add.
+@param nodeType the kind of node to add.
+@param upstreamNodeId the id of the node immediately upstream of this node.  Can be null.
+@param downstreamNodeId the id of the node immediately downstream of this node.
 @param isNaturalFlow whether the node is a natural flow node or not.
 @param isImport whether the node is an import node or not.
 @return the node that is added
 */
-public HydrologyNode addNode(String id, int type, String usid, String dsid, boolean isNaturalFlow, boolean isImport) {
-/*
-	Message.printStatus(2, "", "Adding '" + id + "', linking upstream to '"
-		+ usid + " and downstream to '" + dsid + "'  (" + type + ")"
-		+ "  Is natural flow: " + isNaturalFlow);
-*/
-	// make sure the id is unique within the network
-	id = checkUniqueID(id, true);
+public HydrologyNode addNode(String nodeId, int nodeType, String upstreamNodeId, String downstreamNodeId, boolean isNaturalFlow, boolean isImport) {
+	String routine = getClass().getSimpleName() + ".addNode";
+	if ( Message.isDebugOn ) {
+		Message.printDebug(1, routine, "Adding node \"" + nodeId + "\", linking upstream to \""
+			+ upstreamNodeId + "\" and downstream to \"" + downstreamNodeId + "\", nodeType=" + nodeType +
+			" isNaturalFlow=" + isNaturalFlow);
+	}
+	// Make sure the id is unique within the network
+	nodeId = checkUniqueID(nodeId, true);
 
-	// create the node and set up the fields that are known
+	// Create the node and set up the fields that are known
 	HydrologyNode addNode = new HydrologyNode();
 	//addNode.setInWIS(__inWIS);
 	// FIXME 2008-03-15 Need to remove WIS code
-	addNode.setType(type);
-	addNode.setCommonID(id);
+	addNode.setType(nodeType);
+	addNode.setCommonID(nodeId);
 	addNode.setIsNaturalFlow(isNaturalFlow);
 	addNode.setIsImport(isImport);
 
 	boolean done = false;
-	HydrologyNode ds = null;
-	HydrologyNode us = null;
+	HydrologyNode downstreamNode = null;
+	HydrologyNode upstreamNode = null;
 	HydrologyNode node = getMostUpstreamNode();
 	List<HydrologyNode> v = new Vector<HydrologyNode>();
 
-	// loop through the network and do two things:
-	// 1) add all the nodes to a Vector so that they can easily be
+	// Loop through the network and do two things:
+	// 1) Add all the nodes to a list so that they can easily be
 	//    manipulated later.  This method needs random accessibility
 	//    of the nodes in the network.
-	// 2) find the nodes that have the upstream and downstream ids passed
-	//    to this method, and store them in the us and ds nodes, 
-	//    respectively.
+	// 2) Find the nodes that have the upstream and downstream ids passed
+	//    to this method, and store them in the upstreamNode and downstreamNode, respectively.
 	while (!done) {
 		if (node == null) {
 			done = true;
@@ -577,11 +611,11 @@ public HydrologyNode addNode(String id, int type, String usid, String dsid, bool
 				done = true;
 			}
 
-			if (usid != null && node.getCommonID().equals(usid)) {
-				us = node;
+			if (upstreamNodeId != null && node.getCommonID().equals(upstreamNodeId)) {
+				upstreamNode = node;
 			}
-			else if (node.getCommonID().equals(dsid)) {
-				ds = node;
+			else if (node.getCommonID().equals(downstreamNodeId)) {
+				downstreamNode = node;
 			}
 			
 			if (!done) {
@@ -591,17 +625,17 @@ public HydrologyNode addNode(String id, int type, String usid, String dsid, bool
 	}
 
 	boolean found = false;
-	HydrologyNode upstreamNode = null;
-	String[] usids = ds.getUpstreamNodesIDs();			
+	HydrologyNode downStreamNodeUpstreamNode = null;
+	String[] upstreamNodeIds = downstreamNode.getUpstreamNodesIDs();
 
-	// if the usid is not null then find that node in the upstream nodes
-	// of the ds node, and then replace it in ds's upstream nodes with the node being added
-	if (usid != null) {
-		for (int i = 0; i < usids.length; i++) {
-			if (usids[i].equals(usid)) {
-				upstreamNode = ds.getUpstreamNode(i);
-				addNode.setTributaryNumber(upstreamNode.getTributaryNumber());
-				ds.replaceUpstreamNode(addNode, i);
+	// If the upstreamNodeId is not null then find that node in the upstream nodes
+	// of the downstreamNode, and then replace it in downstreamNode's upstream nodes with the node being added.
+	if (upstreamNodeId != null) {
+		for (int i = 0; i < upstreamNodeIds.length; i++) {
+			if (upstreamNodeIds[i].equals(upstreamNodeId)) {
+				downStreamNodeUpstreamNode = downstreamNode.getUpstreamNode(i);
+				addNode.setTributaryNumber(downStreamNodeUpstreamNode.getTributaryNumber());
+				downstreamNode.replaceUpstreamNode(addNode, i);
 				found = true;
 				break;
 			}
@@ -609,89 +643,87 @@ public HydrologyNode addNode(String id, int type, String usid, String dsid, bool
 	}
 
 	// If the node was not found upstream of the downstream node then
-	// don't worry about, just add the node to be added to upstream nodes of "ds"
+	// don't worry about, just add the node to be added to upstream nodes of downstreamNode.
 	if (!found) {
-		addNode.setTributaryNumber(ds.getNumUpstreamNodes() + 1);
-		ds.addUpstreamNode(addNode);
+		addNode.setTributaryNumber(downstreamNode.getNumUpstreamNodes() + 1);
+		downstreamNode.addUpstreamNode(addNode);
 	}
 
-	// Set ds to be the node to be added's downstream node
-	addNode.setDownstreamNode(ds);
+	// Set downstreamNode to be the node to be added's downstream node
+	addNode.setDownstreamNode(downstreamNode);
 
 	// At this point, the following connections have been made:
-	// - the node to be added now points downstream to ds
-	// - ds node points to the node to be added as one of its upstream nodes.
+	// - the node to be added now points downstream to downstreamNode.
+	// - downstreamNode node points to the node to be added as one of its upstream nodes.
 
 	// If an upstream node was found, then set the node to be added
 	// as the downstream node and the upstream node as the node to be added's only upstream node.
-	if (us != null) {
-		us.setDownstreamNode(addNode);
-		addNode.addUpstreamNode(us);
+	if (upstreamNode != null) {
+		upstreamNode.setDownstreamNode(addNode);
+		addNode.addUpstreamNode(upstreamNode);
 	}
 	
 	// Get the computational order value from the downstream node and
 	// re-assign it to the node to be added.  The computational order
 	// for all the nodes downstream of the node to be added will be recomputed below.
-	int comp = ds.getComputationalOrder();
+	int comp = downstreamNode.getComputationalOrder();
 	addNode.setComputationalOrder(comp);
 
-	// Set ds's upstream order to now be the node to be added's, too.
-	addNode.setUpstreamOrder(ds.getUpstreamOrder());
+	// Set downstreamNode's upstream order to now be the node to be added's, too.
+	addNode.setUpstreamOrder(downstreamNode.getUpstreamOrder());
 
 	int serial = -1;
 
 	if (!found) {
 		// (new tributary) 
-		// Look through the network upstream of the downstream node 
-		// for the largest serial value -- the new node will need 
-		// to be one larger than that value if it is on a new tributary
-		serial = findHighestUpstreamSerial(ds, ds.getSerial());
+		// Look through the network upstream of the downstream node for the largest serial value
+		// - the new node will need to be one larger than that value if it is on a new tributary.
+		serial = findHighestUpstreamSerial(downstreamNode, downstreamNode.getSerial());
 	}
 	else {
-		// placed on an existing tributary -- upstreamNode still holds 
-		// the value of the upstream Node
-		serial = upstreamNode.getSerial();
-		// decrement it because want to find the value of the serial
-		// number that is one less than what the new node's serial number will be
+		// Placed on an existing tributary
+		// - upstreamNode still holds the value of the upstream Node
+		serial = downStreamNodeUpstreamNode.getSerial();
+		// Decrement it because want to find the value of the serial
+		// number that is one less than what the new node's serial number will be.
 		serial--;
 	}
 
-	// now calculate the location for the new node.
+	// Now calculate the plotting location for the new node.
 
-	double x1 = ds.getX();
+	double x1 = downstreamNode.getX();
 	double x2 = 0;
-	double y1 = ds.getY();
+	double y1 = downstreamNode.getY();
 	double y2 = 0;
 
-	if (us != null) {
-		// if there are any upstream nodes, then average the X and Y
-		// values of ds and us and set the node to be added there.  
+	if (upstreamNode != null) {
+		// If there are any upstream nodes, then average the X and Y
+		// values of downstreamNode and upstreamNode and set the node to be added there.  
 		// It will end up directly in-between both nodes.
-		x2 = us.getX();
-		y2 = us.getY();
+		x2 = upstreamNode.getX();
+		y2 = upstreamNode.getY();
 
 		addNode.setX((x1 + x2) / 2);
 		addNode.setY((y1 + y2) / 2);		
 	}
 	else {
-		// if there is no upstream node then the location can't simply
+		// If there is no upstream node then the location can't simply
 		// be average out.  See if the downstream node has a downstream node.
-		HydrologyNode dsds = ds.getDownstreamNode();
+		HydrologyNode downstreamNodeDownstreamNode = downstreamNode.getDownstreamNode();
 
-		if (dsds == null) {
-			// if the downstream node has no downstream then the
-			// network only has one node in it.  Put this new
-			// node almost completely on top of the old one -- it can be moved later.
+		if (downstreamNodeDownstreamNode == null) {
+			// If the downstream node has no downstream then the network only has one node in it.
+			// Put this new node almost completely on top of the old one -- it can be moved later.
 			addNode.setX(x1 + 0.001);
 			addNode.setY(y1 + 0.001);
 		}
 		else {
-			// if the downstream node has a downstream node then
-			// get the delta of the position from the ds node and
-			// its dsds node, and apply the same delta to ds to
+			// If the downstream node has a downstream node then
+			// get the delta of the position from the downstreamNode and
+			// its downstream node, and apply the same delta to downstreamNode to
 			// determine the position for this new node.
-			x2 = dsds.getX();
-			y2 = dsds.getY();
+			x2 = downstreamNodeDownstreamNode.getX();
+			y2 = downstreamNodeDownstreamNode.getY();
 			double dx = x1 - x2;
 			double dy = y1 - y2;
 			addNode.setX(x1 + dx);
@@ -699,7 +731,7 @@ public HydrologyNode addNode(String id, int type, String usid, String dsid, bool
 		}
 	}
 
-	// loop through the entire network and change the serial counter and
+	// Loop through the entire network and change the serial counter and
 	// computational order value.  All the nodes downstream of the node
 	// being added need their computation order value incremented.  All
 	// the nodes upstream of the node to be added need their serial counter decremented.
@@ -713,25 +745,26 @@ public HydrologyNode addNode(String id, int type, String usid, String dsid, bool
 		}
 	}
 
-	// set the serial of the new node -- one greater than the serial number found above
+	// Set the serial of the new node
+	// - one greater than the serial number found above
 	addNode.setSerial(serial + 1);
 
-	// a few changes are left to be made.  The node in reach number
-	// counter needs set, as does the reach counter.
+	// A few changes are left to be made:
+	// - the node in reach number counter needs set, as does the reach counter.
 
-	if (us == null) {
-		if (usids == null || usids.length == 0) {
-			// if there is no upstream node found with the 
+	if (upstreamNode == null) {
+		if (upstreamNodeIds == null || upstreamNodeIds.length == 0) {
+			// If there is no upstream node found with the 
 			// specified ID and there are no upstream nodes from 
 			// the downstream node then the node in reach number
 			// and reach counter can be easily figured from the
-			// ds node.  Basically, this new node is the very last
-			// node in an existing reach
-			addNode.setNodeInReachNumber(ds.getNodeInReachNumber() + 1);
-			addNode.setReachCounter(ds.getReachCounter());		
+			// downstream node.  Basically, this new node is the very last
+			// node in an existing reach.
+			addNode.setNodeInReachNumber(downstreamNode.getNodeInReachNumber() + 1);
+			addNode.setReachCounter(downstreamNode.getReachCounter());		
 		}
 		else {
-			// otherwise find the highest-numbered reach in the
+			// Otherwise find the highest-numbered reach in the
 			// system and then set the new node's reach to be
 			// a new reach 1 more than the current highest-numbered
 			// reach number.  This new node is the start of a new
@@ -749,16 +782,16 @@ public HydrologyNode addNode(String id, int type, String usid, String dsid, bool
 		}
 	}
 	else {
-		// if there is an upstream node then this node is in the same
-		// reach as the branch between ds and us.  All that needs done
+		// If there is an upstream node then this node is in the same
+		// reach as the branch between downstreamNode and upstreamNode.  All that needs done
 		// is to increment all the nodes downstream of this one
 		// so that their 'node in reach number' value is one more.
 
-		int nodeNum = us.getNodeInReachNumber();
+		int nodeNum = upstreamNode.getNodeInReachNumber();
 	
 		addNode.setNodeInReachNumber(nodeNum);
 	
-		int reach = us.getReachCounter();
+		int reach = upstreamNode.getReachCounter();
 		addNode.setReachCounter(reach);
 	
 		for (int i = 0; i < v.size(); i++) {
@@ -770,6 +803,7 @@ public HydrologyNode addNode(String id, int type, String usid, String dsid, bool
 			}
 		}
 	}
+	// Return the node that was added
 	return addNode;
 }
 
@@ -784,7 +818,7 @@ most-downstream node in the network (the END node).  If false, the the END
 node is the last node in the list.
 */
 public void calculateNetworkNodeData(List<HydrologyNode> nodesV, boolean endFirst)
-{	String routine = getClass().getName() + ".calculateNetworkNodeData";
+{	String routine = getClass().getSimpleName() + ".calculateNetworkNodeData";
 	// First put the nodes into an array for easy and quick traversal. 
 	// In the array, make sure the END node is always the first one found.
 	int size = nodesV.size();
@@ -2945,7 +2979,7 @@ public HydrologyNode findNode(String commonID, HydrologyNode node) {
 }
 
 /**
-Find a node given its common indentifier.  The node head is used as a starting
+Find a node given its common identifier.  The node head is used as a starting
 point to position the network at the top and then the network is traversed.
 @return HydroBase_Node that is found or null if not found.
 @param commonID Common identifier for node.
@@ -2977,7 +3011,7 @@ public HydrologyNode findNode(String commonID) {
 
 /**
 Returns the reach's confluence and returns its next computational node (in the next reach)
-@return the the reache's confluence and return its next computational node (in the next reach).
+@return the the reach's confluence and return its next computational node (in the next reach).
 */
 public static HydrologyNode findReachConfluenceNext(HydrologyNode node) {
 	String routine = "HydroBase_NodeNetwork.findReachConfluenceNext";
@@ -3125,9 +3159,9 @@ public HydrologyNode findUpstreamNaturalFowNodeInReach(HydrologyNode node) {
 
 /**
 Looks for the first upstream flow node on the current stem and the first 
-upstream flow node on any of the tribs to this stream.  For the initial call,
+upstream flow node on any of the tributaries to this stream.  For the initial call,
 set 'recursing' to false -- will be set to true if this method recursively calls itself.
-@param upstreamFlowNodes an allocated Vector that will be filled and used internally.
+@param upstreamFlowNodes an allocated list that will be filled and used internally.
 @param node the node from which to look upstream
 @param recursing false if calling from outside this method, true if calling recursively.
 */
@@ -3299,6 +3333,123 @@ public List<HydrologyNode> findUpstreamFlowNodes(List<HydrologyNode> upstreamFlo
 		}
 	}
 	return upstreamFlowNodes;
+}
+
+/**
+Looks for the upstream nodes on the current stem and on any of the tributaries to this stream.
+Currently all node types are added, including confluence, blank, etc.
+Nodes are added on a reach until a tributary is found, and then recursion occurs.
+@param foundNodes a list of found nodes that will be filled, if null will be created and returned.
+@param node the node from which to look upstream, can be any node to start and
+if called recursively will be the first node on the upstream reach
+@param addFirstNode if true, add the node passed in to the found list,
+used when handling whether the starting node should be in the results or not,
+will be set to true when recursing.
+@param upstreamNodeIdsToStop list of upstream node identifiers to include but not go past.
+If the node ID is prefixed by "-", do not add the upstream node ID to the list (default is to add).
+@return list of found nodes (same list as foundNodes if it was specified)
+*/
+public List<HydrologyNode> findUpstreamNodes ( List<HydrologyNode> foundNodes,
+	HydrologyNode node, boolean addFirstNode, List<String> upstreamNodeIdsToStop )
+{	int dl = 1;
+	String routine = getClass().getSimpleName() + ".findUpstreamNodes";
+
+	// Loop through upstream nodes.
+	// - if the node has no upstream nodes, then return
+	// - if a node has multiple upstream nodes, call this method recursively
+	
+	boolean firstNodeProcessed = false; // Special care is taken for the first node
+	while ( true ) {
+		if ( node == null ) {
+			// Could occur through looping that top of reach is encountered
+			break;
+		}
+		if ( Message.isDebugOn ) {
+			Message.printDebug(dl,routine,"Checking reach node \"" + node.getCommonID() + "\"");
+		}
+		// First add the current node.
+		// - add the node and reset the node to the upstream node
+		// Check to see if the node should be included
+		boolean upstreamNodeIdToStopFound = false;
+		boolean shouldIncludeUpstreamNodeToStop = true;
+		if ( upstreamNodeIdsToStop != null ) {
+			for ( String upstreamNodeIdToStop : upstreamNodeIdsToStop ) {
+				String upstreamNodeIdToStop2 = upstreamNodeIdToStop; // ID without leading dash
+				if ( upstreamNodeIdToStop.startsWith("-") ) {
+					upstreamNodeIdToStop2 = upstreamNodeIdToStop.substring(1); // Remove dash
+					shouldIncludeUpstreamNodeToStop = false; // Because of dash
+				}
+				if ( upstreamNodeIdToStop2.equalsIgnoreCase(node.getCommonID())) {
+					upstreamNodeIdToStopFound = true; // Check this first and then shouldIncludeUpstreamNodeToStop
+					break; // Found a match so quit searching
+				}
+			}
+		}
+		// Handle the cases separately to avoid confusion - a bit redundant but clear
+		if ( firstNodeProcessed ) {
+			// Have already processed the first node.
+			// Always add unless stop node and stop node should be ignored.
+			if ( upstreamNodeIdToStopFound ) {
+				if ( shouldIncludeUpstreamNodeToStop ) {
+					if ( Message.isDebugOn ) {
+						Message.printDebug(dl,routine,"Adding upstream reach node to stop \"" + node.getCommonID() + "\"");
+					}
+					foundNodes.add(node);
+				}
+				break; // Since at stop node
+			}
+			else {
+				// Have not found upstream node to stop so add node and keep going
+				if ( Message.isDebugOn ) {
+					Message.printDebug(dl,routine,"Adding reach node \"" + node.getCommonID() + "\"");
+				}
+				foundNodes.add(node);
+			}
+		}
+		else {
+			// First node - do the checks for the upstream node for completeness
+			if ( addFirstNode ) {
+				if ( upstreamNodeIdToStopFound ) {
+					if ( shouldIncludeUpstreamNodeToStop ) {
+						if ( Message.isDebugOn ) {
+							Message.printDebug(1,routine,"Adding upstream reach node for stop \"" + node.getCommonID() + "\"");
+						}
+						foundNodes.add(node);
+					}
+					break; // Since at stop node
+				}
+				else {
+					// Have not found upstream node to stop so add node and keep going
+					if ( Message.isDebugOn ) {
+						Message.printDebug(dl,routine,"Adding first reach node \"" + node.getCommonID() + "\"");
+					}
+					foundNodes.add(node);
+				}
+			}
+			// Indicate that have processed the first node for the method call
+			firstNodeProcessed = true;
+		}
+		// Decide whether continuing on reach or branching
+		List<HydrologyNode> upstreamNodes = node.getUpstreamNodes();
+		if ( (upstreamNodes == null) || (upstreamNodes.size() == 0) ) {
+			// No more upstream nodes
+			break; // Will cause a return of found nodes
+		}
+		else if ( upstreamNodes.size() == 1 ) {
+			// Continuing on the same reach
+			// -set the node to the only upstream node for the next loop iteration
+			node = upstreamNodes.get(0);
+		}
+		else {
+			// Have multiple reaches so call recursively and break when back because all upstream nodes will have been processed
+			boolean addFirstNode2 = true;
+			for ( HydrologyNode upstreamNode : upstreamNodes ) {
+				findUpstreamNodes ( foundNodes, upstreamNode, addFirstNode2, upstreamNodeIdsToStop );
+			}
+			break; // Will cause a return of found nodes
+		}
+	}
+	return foundNodes;
 }
 
 /**
@@ -3692,7 +3843,27 @@ public HydrologyNode getMostUpstreamNode() {
 }
 
 /**
+ * Return the network name.
+ * @return the network name.
+ */
+@Override
+public String getNetworkName () {
+	return this.__networkName;
+}
+
+/**
+ * Return the network ID.
+ * @return the network ID.
+ */
+@Override
+public String getNetworkId () {
+	return this.__networkId;
+}
+
+/**
 Returns the number of nodes in the network.
+This does not seem reliable, perhaps used for a specific legacy purpose.
+See size().
 @return the number of nodes in the network.
 */
 public int getNodeCount() {
@@ -4924,7 +5095,7 @@ String comment, int width, int flag) {
 Resets the computational order information for each node.
 */
 public void resetComputationalOrder() {
-	String routine = "HydroBase_NodeNetwork.resetComputationalOrder";
+	String routine = getClass().getSimpleName() + ".resetComputationalOrder";
 	int dl = 30;
 
 	Message.printDebug(dl, routine, "Resetting computational order for nodes");
@@ -4938,8 +5109,7 @@ public void resetComputationalOrder() {
 	int order = 1;
 	for (HydrologyNode nodePt = getUpstreamNode(node, POSITION_ABSOLUTE);
 		nodePt != null;
-		nodePt = getDownstreamNode(nodePt, POSITION_COMPUTATIONAL),
-		++order) {
+		nodePt = getDownstreamNode(nodePt, POSITION_COMPUTATIONAL), ++order) {
 		nodePt.setComputationalOrder(order);
 		if (nodePt.getDownstreamNode() == null) {
 			break;
@@ -5102,13 +5272,13 @@ public void setLx ( double lx )
 Sets up the linked list network based on a list of the nodes in the network.
 The nodes are checked to see which one is the head of the network and that node
 is stored internally as __nodeHead.
-@param v the list of nodes that comprise a network.
+@param nodes the list of nodes that comprise a network.
 */
-public void setNetworkFromNodes(List<HydrologyNode> v) {
-	__nodeCount = v.size();
+public void setNetworkFromNodes(List<HydrologyNode> nodes) {
+	__nodeCount = nodes.size();
 
 	HydrologyNode ds = null;
-	for (HydrologyNode node : v) {
+	for (HydrologyNode node : nodes) {
 		ds = node.getDownstreamNode();
 		
 		if ( (ds == null) || (node.getType() == HydrologyNode.NODE_TYPE_END) ) {
@@ -5179,6 +5349,21 @@ public void setTitleX ( double titleX )
 public void setTitleY ( double titleY )
 {
 	__titleY = titleY;
+}
+
+/**
+ * Return the number of nodes, including the end node.
+ * This is reliable whereas getNodeCount() is not (legacy behavior does not always work).
+ * @return number of nodes in the network, including the end node.
+ */
+public int size () {
+	int nodeCount = 0;
+	for (HydrologyNode node = HydrologyNodeNetwork.getUpstreamNode(getNodeHead(), HydrologyNodeNetwork.POSITION_ABSOLUTE);
+        node.getDownstreamNode() != null;
+        node = HydrologyNodeNetwork.getDownstreamNode(node, HydrologyNodeNetwork.POSITION_COMPUTATIONAL)) {
+        ++nodeCount;
+	}
+	return nodeCount;
 }
 
 /**
