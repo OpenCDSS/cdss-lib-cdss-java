@@ -1,0 +1,1 @@
+Include folders for each library jar.  This will likely be removed when moving to Maven.
