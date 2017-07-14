@@ -3,6 +3,5 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/cdss-lib-common-java"/>
-	<classpathentry kind="lib" path="lib/Xerces/xerces.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
