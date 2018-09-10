@@ -10,7 +10,7 @@ This software is being migrated to an open source software project as part of th
 See the following online resources:
 
 * [CDSS](http://cdss.state.co.us)
-* [OpenCDSS](http://learn.openwaterfoundation.org/cdss-emod-dev/)
+* [OpenCDSS](http://learn.openwaterfoundation.org/cdss-website-opencdss/)
 * [TSTool Developer Documentation](http://learn.openwaterfoundation.org/cdss-app-tstool-doc-dev/) - example of application that uses this library
 
 The developer documentation and guidelines will be updated as the development environment is used in development.  See the following sections in this page:
@@ -18,6 +18,7 @@ The developer documentation and guidelines will be updated as the development en
 * [Repository Folder Structure](#repository-folder-structure)
 * [Repository Dependencies](#repository-dependencies)
 * [Development Environment Folder Structure](#development-environment-folder-structure)
+* [Version](#version)
 * [Contributing](#contributing)
 * [License](#license)
 * [Contact](#contact)
@@ -96,6 +97,13 @@ C:\Users\user\                               Windows user home folder (typical d
         ...others...                         See application developer documenation and README for full list.
 
 ```
+
+## Version ##
+
+A version for the library is typically not defined.
+Instead, tags are used to cross-reference the library version with commit of application code such as TSTool.
+This allows checking out a version of the library consistent with an application version.
+This approach might need to change if the library is seen as an independent resource that is used by many third-party applications.
 
 ## Contributing ##
 
