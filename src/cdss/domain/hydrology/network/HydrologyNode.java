@@ -828,6 +828,7 @@ private void calculateNodeExtentForNetwork(GRJComponentDrawingArea da) {
 Calculates bounds for nodes in the WIS Network display.
 @param da the drawing area on which to calculate bounds.
 */
+@SuppressWarnings("unused")
 private void calculateWISBounds(GRJComponentDrawingArea da) {
 	if (__symbol == null) {
 		int style = GRSymbol.TYPE_POLYGON;
@@ -1204,6 +1205,7 @@ private void drawNodeForNetwork(GRJComponentDrawingArea da) {
 Draws this node for the WIS network display.
 @param da the GRJComponentDrawingArea on which to draw the node.
 */
+@SuppressWarnings("unused")
 private void drawNodeForWIS(GRJComponentDrawingArea da) {
 	// Format the label that accompanies the text
 	String label = __label;
