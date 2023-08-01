@@ -775,54 +775,54 @@ private void calculateWISBounds(GRJComponentDrawingArea da) {
 		// The secondary symbol is used to blank out the area behind the primary symbol's node icon.
 
 		if (__nodeType.equalsIgnoreCase("Reservoir")) {
-			__symbol = new GRSymbol(symbolType, GRSymbolShapeType.TRIANGLE_RIGHT, black, black, iconDiameter*2/3, iconDiameter*2/3);
+			__symbol = new GRSymbol(symbolType, GRSymbolShapeType.TRIANGLE_RIGHT_HOLLOW, black, black, iconDiameter*2/3, iconDiameter*2/3);
 			__secondarySymbol = new GRSymbol(symbolType, GRSymbolShapeType.TRIANGLE_RIGHT_FILLED,
 				black, black, iconDiameter*2/3, iconDiameter*2/3);
 			__symText = null;
 		}
 		else if (__nodeType.equalsIgnoreCase("Stream")) {
-			__symbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE,
+			__symbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE_HOLLOW,
 				black, black, iconDiameter*2/3, iconDiameter*2/3);
 			__secondarySymbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE_FILLED,
 				black, black, iconDiameter*2/3, iconDiameter*2/3);
 			__symText = "O";
 		}
 		else if (__nodeType.equalsIgnoreCase("Confluence")) {
-			__symbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE, black, black, iconDiameter*2/3, iconDiameter*2/3);
+			__symbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE_HOLLOW, black, black, iconDiameter*2/3, iconDiameter*2/3);
 			__secondarySymbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE_FILLED,
 				black, black, iconDiameter*2/3, iconDiameter*2/3);
 			__symText = "C";
 		}
 		else if (__nodeType.equalsIgnoreCase("Station") || __nodeType.equalsIgnoreCase("Streamflow")) {
-			__symbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE,
+			__symbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE_HOLLOW,
 				black, black, iconDiameter*2/3, iconDiameter*2/3);
 			__secondarySymbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE_FILLED,
 				black, black, iconDiameter*2/3, iconDiameter*2/3);
 			__symText = "B";
 		}
 		else if (__nodeType.equalsIgnoreCase("Diversion")) {
-			__symbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE,
+			__symbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE_HOLLOW,
 				black, black, iconDiameter*2/3, iconDiameter*2/3);
 			__secondarySymbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE_FILLED,
 				black, black, iconDiameter*2/3, iconDiameter*2/3);
 			__symText = "D";
 		}
 		else if (__nodeType.equalsIgnoreCase("MinFlow")) {
-			__symbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE,
+			__symbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE_HOLLOW,
 				black, black, iconDiameter*2/3, iconDiameter*2/3);
 			__secondarySymbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE_FILLED,
 				black, black, iconDiameter*2/3, iconDiameter*2/3);
 			__symText = "M";
 		}
 		else if (__nodeType.equalsIgnoreCase("Other")) {
-			__symbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE,
+			__symbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE_HOLLOW,
 				black, black, iconDiameter*2/3, iconDiameter*2/3);
 			__secondarySymbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE_FILLED,
 				black, black, iconDiameter*2/3, iconDiameter*2/3);
 			__symText = "O";
 		}
 		else if (__nodeType.equalsIgnoreCase("Plan")) {
-			__symbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE,
+			__symbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE_HOLLOW,
 				black, black, iconDiameter*2/3, iconDiameter*2/3);
 			__secondarySymbol = new GRSymbol(symbolType, GRSymbolShapeType.SQUARE_FILLED,
 				black, black, iconDiameter*2/3, iconDiameter*2/3);
@@ -943,7 +943,7 @@ private void drawNodeForNetwork(GRJComponentDrawingArea da) {
 
 	// If there is a symbol to be drawn.
 	if (__symbol != null) {
-		if ( __symbol.getShapeType() == GRSymbolShapeType.CIRCLE ) {
+		if ( __symbol.getShapeType() == GRSymbolShapeType.CIRCLE_HOLLOW ) {
 			// Fill in the background with white so the node can't be seen through.
 			// For example, if the symbol draws over something, the symbol needs to be clearly visible.
 			GRDrawingAreaUtil.setColor(da, GRColor.white);
@@ -1103,14 +1103,14 @@ private void drawNodeForNetwork(GRJComponentDrawingArea da) {
 		GRDrawingAreaUtil.setColor(da, GRColor.black);
 	}
 	if ( (__symbol != null) && getIsNaturalFlow()) {
-		GRDrawingAreaUtil.drawSymbol(da, GRSymbolShapeType.CIRCLE,
+		GRDrawingAreaUtil.drawSymbol(da, GRSymbolShapeType.CIRCLE_HOLLOW,
 			__x, __y, __symbol.getSize() + getDecoratorDiameter(), GRUnits.DEVICE, 0);
 	}
 
 	// Draw a larger square around import nodes - same color as above.
 	if ( (__symbol != null) && getIsImport() ) {
 		//GRDrawingAreaUtil.drawSymbol(da, GRSymbol.SYM_FARR1,
-		GRDrawingAreaUtil.drawSymbol(da, GRSymbolShapeType.SQUARE,
+		GRDrawingAreaUtil.drawSymbol(da, GRSymbolShapeType.SQUARE_HOLLOW,
 			__x, __y, __symbol.getSize() + getDecoratorDiameter(), GRUnits.DEVICE, 0);
 	}
 
@@ -2858,16 +2858,16 @@ private void setSymbolFromNodeType ( int nodeType, boolean computeSize ) {
 		}
 	}
 	else if ( nodeType == NODE_TYPE_DIV ) {
-		__symbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE, symbolColor, symbolColor, iconDiameter, iconDiameter);
+		__symbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE_HOLLOW, symbolColor, symbolColor, iconDiameter, iconDiameter);
 		__symText = "D";
 	}
 	else if ( nodeType == NODE_TYPE_DIV_AND_WELL ) {
-		__symbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE, symbolColor, symbolColor, iconDiameter, iconDiameter);
+		__symbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE_HOLLOW, symbolColor, symbolColor, iconDiameter, iconDiameter);
 		__symText = "DW";
 	}
 	else if ( nodeType == NODE_TYPE_END ) {
 		__symbol = new GRSymbol (symbolType, GRSymbolShapeType.X, symbolColor, symbolColor, iconDiameter, iconDiameter);
-		__secondarySymbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE, symbolColor, symbolColor, iconDiameter, iconDiameter);
+		__secondarySymbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE_HOLLOW, symbolColor, symbolColor, iconDiameter, iconDiameter);
 		__symText = null;
 	}
 	else if ( nodeType == NODE_TYPE_FLOW ) {
@@ -2875,7 +2875,7 @@ private void setSymbolFromNodeType ( int nodeType, boolean computeSize ) {
 		__symText = null;
 	}
 	else if ( nodeType == NODE_TYPE_ISF ) {
-		__symbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE, symbolColor, symbolColor, iconDiameter, iconDiameter);
+		__symbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE_HOLLOW, symbolColor, symbolColor, iconDiameter, iconDiameter);
 		//__symText = "I";
 		__symText = "M";
 	}
@@ -2884,7 +2884,7 @@ private void setSymbolFromNodeType ( int nodeType, boolean computeSize ) {
 		__symText = null;
 	}
 	else if ( nodeType == NODE_TYPE_OTHER ) {
-		__symbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE, symbolColor, symbolColor, iconDiameter, iconDiameter);
+		__symbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE_HOLLOW, symbolColor, symbolColor, iconDiameter, iconDiameter);
 		__symText = "O";
 	}
 	else if ( nodeType == NODE_TYPE_PLAN ) {
@@ -2896,7 +2896,7 @@ private void setSymbolFromNodeType ( int nodeType, boolean computeSize ) {
 		__symText = null;
 	}
 	else if ( nodeType == NODE_TYPE_WELL ) {
-		__symbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE, symbolColor, symbolColor, iconDiameter, iconDiameter);
+		__symbol = new GRSymbol(symbolType, GRSymbolShapeType.CIRCLE_HOLLOW, symbolColor, symbolColor, iconDiameter, iconDiameter);
 		__symText = "W";
 	}
 	else {
