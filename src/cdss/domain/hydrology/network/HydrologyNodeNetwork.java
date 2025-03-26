@@ -254,6 +254,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Hashtable;
 import java.util.List;
@@ -446,9 +447,9 @@ private double
 	//__legendY,
 	//__legendDX,
 	//__legendDY,
-	__nodeDiam,
-	__titleX,
-	__titleY;
+	__nodeDiam;
+	//__titleX,
+	//__titleY;
 
 /**
 The name of the input file for this network, or null if it has not been read/saved.
@@ -860,7 +861,7 @@ public void calculateNetworkNodeData(List<HydrologyNode> nodesV, boolean endFirs
 	// integer points to the location within the array where the node can be found.
 	Hashtable<String,Integer> hash = new Hashtable<String,Integer>(size);
 	for (int i = 0; i < size; i++) {
-		hash.put(nodes[i].getCommonID(), new Integer(i));
+		hash.put(nodes[i].getCommonID(), Integer.valueOf(i));
 	}
 
 	// certain data for the head node can be set immediately.
@@ -2635,22 +2636,6 @@ public void finalCheck(double lx, double by, double rx, double ty, boolean setBo
 }
 
 /**
-Finalize before garbage collection.
-*/
-protected void finalize()
-throws Throwable {
-	__nodeHead = null;
-	__checkFP = null;
-	__newline = null;
-	__annotationList = null;
-	__layoutList = null;
-	__linkList = null;
-	__title = null;
-
-	super.finalize();
-}
-
-/**
 Find the downstream natural flow node in the reach, given a starting node.  This is
 used in WIS to find a downstream node to use for computations.
 This method does consider dry nodes as natural flow nodes if the flag has been turned on.
@@ -2931,10 +2916,6 @@ public HydrologyNode findNode(int dataTypeToFind, int nodeTypeToFind, String dat
 	for (HydrologyNode nodePt = getUpstreamNode(__nodeHead, POSITION_ABSOLUTE);
 		nodePt.getDownstreamNode() != null;
 		nodePt = getDownstreamNode(nodePt, POSITION_COMPUTATIONAL)) {
-		// TODO sam 2017-03-15 why is the following indicated as dead code in Eclipse?
-		if (nodePt == null) {
-			break;
-		}
 		// Get the WIS data in case we need it...
 		// FIXME SAM 2008-03-15 Need to remove WIS code
 		//HydroBase_WISFormat wisFormat = nodePt.getWISFormat();
@@ -4317,7 +4298,7 @@ private List<Object> getValidDownstreamNode(HydrologyNode node, boolean main) {
 	int count = 1;
 	int reachLevel = node.getReachLevel();
 	int currReach = reachLevel - 1;
-	List<Object> v = new Vector<Object>();
+	List<Object> v = new ArrayList<>();
 	
 	ds = getDownstreamNode(node, POSITION_RELATIVE);	
 
@@ -4330,7 +4311,7 @@ private List<Object> getValidDownstreamNode(HydrologyNode node, boolean main) {
 			reachLevel = currReach;
 			if (ds.getX() >= 0 && ds.getY() >= 0) {
 				v.add(ds);
-				v.add(new Integer(count));
+				v.add(Integer.valueOf(count));
 				return v;
 			}
 		}
@@ -4351,7 +4332,7 @@ private List<Object> getValidDownstreamNode(HydrologyNode node, boolean main) {
 		count++;
 	}
 	v.add(null);
-	v.add(new Integer(count - 1));
+	v.add(Integer.valueOf(count - 1));
 	return v;
 }
 
@@ -4737,8 +4718,8 @@ private void initialize() {
 	//In StateMod...__openCount = 0;
 	//In StateMod...__reachCounter = 0;
 	__title = "Node Network";
-	__titleX = 0.0;
-	__titleY = 0.0;
+	//__titleX = 0.0;
+	//__titleY = 0.0;
 	__treatDryAsNaturalFlow = false;
 }
 
@@ -5358,18 +5339,16 @@ public void setTitle ( String title )
  * Set the title X coordinate.
  * @param titleX title X-coordinate.
  */
-public void setTitleX ( double titleX )
-{
-	__titleX = titleX;
+public void setTitleX ( double titleX ) {
+	//__titleX = titleX;
 }
 
 /**
  * Set the title Y coordinate.
  * @param titleY title Y-coordinate.
  */
-public void setTitleY ( double titleY )
-{
-	__titleY = titleY;
+public void setTitleY ( double titleY ) {
+	//__titleY = titleY;
 }
 
 /**
@@ -5514,8 +5493,8 @@ maintained.  Otherwise the file will be overwritten.
 */
 public static void writeListFile ( String filename, String delimiter, boolean update,
 	List<HydrologyNode> nodes, String [] comments, boolean verbose )
-throws Exception
-{	if ( delimiter == null ) {
+throws Exception {
+	if ( delimiter == null ) {
 		delimiter = ",";
 	}
 	
@@ -5564,8 +5543,14 @@ throws Exception
 	
 	int j = 0;
 	PrintWriter out = null;
-	String[] commentString = { "#" };
-	String[] ignoreCommentString = { "#>" };
+	List<String> commentList = new ArrayList<>();
+	for ( String comment : comments ) {
+		commentList.add(comment);
+	}
+	List<String> commentString = new ArrayList<>();
+	commentString.add ( "#" );
+	List<String> ignoreCommentString = new ArrayList<>();
+	ignoreCommentString.add ( "#>" );
 	String[] line = new String[fieldCount];
 	StringBuffer buffer = new StringBuffer();
 
@@ -5573,7 +5558,7 @@ throws Exception
 		out = IOUtil.processFileHeaders(
 			oldFile,
 			IOUtil.getPathUsingWorkingDir(filename), 
-			comments, commentString, ignoreCommentString, 0);
+			commentList, commentString, ignoreCommentString, 0);
 
 		for (int iField = 0; iField < fieldCount; iField++) {
 			buffer.append("\"" + names[iField] + "\"");
