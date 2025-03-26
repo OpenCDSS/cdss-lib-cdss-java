@@ -2314,8 +2314,8 @@ public boolean parseAreaPrecip(String string0) {
 		List<String> v = StringUtil.breakStringList(string, " \t", 0);
 		area = v.get(0);
 		precip = v.get(1);
-		double a = (new Double(area)).doubleValue();
-		double p = (new Double(precip)).doubleValue();
+		double a = Double.valueOf(area).doubleValue();
+		double p = Double.valueOf(precip).doubleValue();
 		double water = 0;
 		if (theOperator == '*') {
 			water = a*p;
@@ -2335,8 +2335,8 @@ public boolean parseAreaPrecip(String string0) {
 		setAreaString(area);
 		setPrecipString(precip);
 		setWaterString(StringUtil.formatString(water, "%12.2f"));
-		setArea((new Double(area)).doubleValue());
-		setPrecip((new Double(precip)).doubleValue());
+		setArea(Double.valueOf(area).doubleValue());
+		setPrecip(Double.valueOf(precip).doubleValue());
 		setWater(water);
 		if (getWater() > 0.0) {
 			// This is a natural flow node.
